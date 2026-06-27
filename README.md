@@ -145,8 +145,8 @@ python scheduler.py
 
 업종과 필요한 자동화 기능을 알려주시면 맞춤 견적 드립니다.
 
-- 📧 이메일: your_email@gmail.com
-- 💬 카카오톡 오픈채팅: (링크)
+- 📧 이메일: heepd555@gmail.com
+- 💬 카카오톡 오픈채팅: https://open.kakao.com/o/sJ8qQvBi
 
 ---
 
