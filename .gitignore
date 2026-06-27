@@ -1,0 +1,13 @@
+# API 키 - 절대 git에 올리지 말 것
+.env
+
+# Google 서비스 계정 키
+credentials.json
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# 수집 결과 CSV
+competitor_*.csv
+youtube_report_*.csv
