@@ -35,6 +35,22 @@ CATEGORY_MAP = {
     "농업·농촌":        ["농업", "농촌", "농어촌", "어업"],
 }
 
+# 고용상태별 관련 키워드
+EMPLOYMENT_KEYWORDS = {
+    "취업준비생": ["취업준비", "구직", "일자리", "취업지원", "청년취업"],
+    "재직자":    ["재직자", "근로자", "직장인", "고용유지"],
+    "사업자":    ["사업자", "소상공인", "중소기업", "자영업"],
+    "프리랜서":  ["프리랜서", "1인", "창작자", "특수고용", "플랫폼종사자", "창업"],
+    "무직":      ["실업", "구직", "취업준비", "실직", "고용보험"],
+}
+
+# 나이대별 키워드
+AGE_KEYWORDS = {
+    (15, 34): ["청년", "청소년"],
+    (40, 65): ["중장년", "신중년"],
+    (65, 99): ["노인", "시니어", "고령"],
+}
+
 
 # ─── 설정 로드 ────────────────────────────────────────────────
 
@@ -192,18 +208,68 @@ def detect_category(item: dict) -> str:
     return item.get("카테고리", "기타")
 
 
+def passes_profile_filter(item: dict, cfg: dict) -> bool:
+    """프로필 기반 필터링"""
+    profile = cfg.get("내_프로필", {})
+    title = item.get("제목", "") + item.get("지원유형", "")
+
+    # 제외 키워드 — 하나라도 포함되면 제외
+    for kw in profile.get("제외키워드", []):
+        if kw in title:
+            return False
+
+    # 관심 키워드 — 입력된 경우 하나라도 포함돼야 통과
+    interest = profile.get("관심키워드", [])
+    if interest and not any(kw in title for kw in interest):
+        # 관심 키워드 없으면 고용상태·나이 키워드로 보완
+        pass_by_employment = False
+        pass_by_age = False
+
+        # 고용상태 매칭
+        employment = profile.get("고용상태", {})
+        for status, active in employment.items():
+            if active:
+                kws = EMPLOYMENT_KEYWORDS.get(status, [])
+                if any(kw in title for kw in kws):
+                    pass_by_employment = True
+                    break
+
+        # 나이 매칭
+        age = profile.get("나이", 0)
+        if age:
+            for (min_age, max_age), kws in AGE_KEYWORDS.items():
+                if min_age <= age <= max_age:
+                    if any(kw in title for kw in kws):
+                        pass_by_age = True
+                        break
+
+        if not pass_by_employment and not pass_by_age:
+            return False
+
+    # 지역 매칭
+    region = profile.get("거주지역", "").strip()
+    item_region = item.get("지역", "전국")
+    if region and "전국" not in item_region and region not in item_region:
+        return False
+
+    return True
+
+
 def passes_filter(item: dict, cfg: dict) -> bool:
-    cat_cfg = cfg["필터조건"]["카테고리"]
-    if cat_cfg.get("전체"):
-        return True
+    """프로필 필터 적용"""
+    profile = cfg.get("내_프로필", {})
 
-    item_cat = detect_category(item)
-    if not cat_cfg.get(item_cat, False):
-        return False
+    # 프로필이 비어있으면 전체 수집
+    has_profile = (
+        profile.get("나이", 0) > 0
+        or profile.get("거주지역", "").strip()
+        or any(profile.get("고용상태", {}).values())
+        or profile.get("관심키워드")
+        or profile.get("제외키워드")
+    )
 
-    region = cfg["필터조건"]["지역"]["지역명"].strip()
-    if region and region not in item.get("지역", "전국"):
-        return False
+    if has_profile:
+        return passes_profile_filter(item, cfg)
 
     return True
 
@@ -342,12 +408,25 @@ def run_gov_support():
     cfg        = load_config()
     seen       = load_seen()
     alert_days = cfg["필터조건"]["마감일_임박_알림_기준(일)"]
-    max_count  = cfg["출력설정"]["최대_출력_건수"]
+    max_count  = cfg["필터조건"]["최대_출력_건수"]
+    profile    = cfg.get("내_프로필", {})
 
     print(f"\n{'='*55}")
     print(f"  정부 지원사업 통합 수집기")
     print(f"  수집 대상: 기업마당 · 복지로 · 고용24")
     print(f"  마감 임박 기준: {alert_days}일 이내")
+
+    # 프로필 요약 출력
+    age = profile.get("나이", 0)
+    region = profile.get("거주지역", "")
+    emp = [k for k, v in profile.get("고용상태", {}).items() if v]
+    interests = profile.get("관심키워드", [])
+    if age or region or emp or interests:
+        print(f"\n  내 프로필")
+        if age:      print(f"    나이:     {age}세")
+        if region:   print(f"    지역:     {region}")
+        if emp:      print(f"    고용상태: {', '.join(emp)}")
+        if interests: print(f"    관심키워드: {', '.join(interests)}")
     print(f"{'='*55}\n")
 
     # 수집
