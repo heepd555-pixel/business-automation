@@ -1,7 +1,7 @@
 """
 정부 지원사업 통합 수집기
 공공데이터포털 공식 API 사용 (합법)
-기업마당 + K-스타트업 + 소진공 + 복지로 + 고용24 + 농림부
+기업마당 + 소진공 + 복지로 + 고용24 + 농림부
 """
 
 import os
@@ -415,20 +415,6 @@ def fetch_youth_jobs(page: int = 1, per_page: int = 100) -> list:
         return []
 
 
-def fetch_kstartup(page: int = 1, per_page: int = 100) -> list:
-    """창업진흥원 K-스타트업 — 창업 지원사업"""
-    return _get_items(
-        "https://apis.data.go.kr/B553077/strtpSportBizInfoService/getStrtpSportBizInfoList",
-        {
-            "serviceKey": PUBLIC_API_KEY,
-            "pageNo": page,
-            "numOfRows": per_page,
-            "returnType": "json",
-        },
-        ["response", "body", "items", "item"],
-        "K-스타트업",
-    )
-
 
 def fetch_smes_fund(page: int = 1, per_page: int = 100) -> list:
     """중소벤처기업부 정책자금 — 융자·보조금"""
@@ -534,23 +520,6 @@ def normalize_bizinfo(item: dict) -> dict:
         "출처":     "기업마당",
     }
 
-
-def normalize_kstartup(item: dict) -> dict:
-    title = item.get("bizPbancNm", "")
-    return {
-        "ID":       item.get("bizPbancSn", ""),
-        "제목":     title,
-        "기관":     item.get("supOrgnNm", "창업진흥원"),
-        "카테고리": "창업",
-        "세부분류": detect_sme_subcategory(title, ""),
-        "지원유형": item.get("bizPbancTypNm", ""),
-        "지역":     item.get("ctpvNm", "전국"),
-        "접수시작": item.get("pbancBgngYmd", ""),
-        "접수마감": item.get("pbancEndYmd", ""),
-        "지원규모": item.get("sprtScaleNm", ""),
-        "URL":      f"https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do",
-        "출처":     "K-스타트업",
-    }
 
 
 def normalize_soss(item: dict) -> dict:
@@ -901,7 +870,7 @@ def run_gov_support():
 
     print(f"\n{'='*55}")
     print(f"  정부 지원사업 통합 수집기")
-    print(f"  수집 대상: 기업마당 · K-스타트업 · 소진공 · 복지로 · 고용24 · 농림부")
+    print(f"  수집 대상: 기업마당 · 소진공 · 복지로 · 고용24 · 농림부")
     print(f"  마감 임박 기준: {alert_days}일 이내")
 
     # 프로필 요약 출력
@@ -929,11 +898,6 @@ def run_gov_support():
     print("  [기업마당] 소상공인·중소기업 수집 중...")
     items = fetch_bizinfo(per_page=100)
     raw.extend([normalize_bizinfo(i) for i in items if i])
-    print(f"  → {len(items)}건")
-
-    print("  [K-스타트업] 창업지원사업 수집 중...")
-    items = fetch_kstartup(per_page=100)
-    raw.extend([normalize_kstartup(i) for i in items if i])
     print(f"  → {len(items)}건")
 
     print("  [소진공] 소상공인 전용 수집 중...")
