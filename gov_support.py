@@ -1,7 +1,7 @@
 """
 정부 지원사업 통합 수집기
 공공데이터포털 공식 API 사용 (합법)
-기업마당 + 복지로 + 고용24
+기업마당 + 복지로
 """
 
 import os
@@ -354,196 +354,48 @@ def fetch_bizinfo(page: int = 1, per_page: int = 20) -> list:
         return []
 
 
-def fetch_welfare(page: int = 1, per_page: int = 20) -> list:
-    """복지로 크롤링 — 복지·생활 지원 서비스"""
-    import time
-    from bs4 import BeautifulSoup
-
+def fetch_welfare(page: int = 1, per_page: int = 100) -> list:
+    """복지로 내부 API — 복지·생활 지원 서비스 (API 키 불필요)"""
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+        "Referer": "https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52005M.do",
+    }
+    body = {
+        "dmSearchParam": {
+            "page": str(page),
+            "onlineYn": "",
+            "searchTerm": "",
+            "tabId": "1",
+            "orderBy": "date",
+            "bkjrLftmCycCd": "",
+            "daesang": "",
+            "period": "",
+            "age": "",
+            "region": "",
+            "jjim": "",
+            "subject": "",
+            "favoriteKeyword": "Y",
+            "sidoCd": "",
+            "sggCd": "",
+            "endYn": "N",
+        }
     }
     try:
-        resp = requests.get(
-            "https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52005M.do",
-            params={"pageIndex": page, "pageSize": per_page},
+        resp = requests.post(
+            "https://www.bokjiro.go.kr/ssis-tbu/TWAT52005M/twataa/wlfareInfo/selectWlfareInfo.do",
+            json=body,
             headers=headers,
             timeout=15,
         )
-        soup = BeautifulSoup(resp.text, "html.parser")
-        items = []
-
-        for row in soup.select("ul.service-list li, .welfare-list li, table tbody tr"):
-            # 제목
-            a_tag = row.select_one("a")
-            if not a_tag:
-                continue
-            href = a_tag.get("href", "")
-            svc_id = ""
-            if "wlfareInfoId=" in href:
-                svc_id = href.split("wlfareInfoId=")[-1].split("&")[0]
-
-            title    = a_tag.get_text(strip=True)
-            org      = row.select_one(".org, .instt, td:nth-child(3)")
-            life_cat = row.select_one(".category, .life-cat, td:nth-child(2)")
-            target   = row.select_one(".target, .trgter, td:nth-child(4)")
-
-            items.append({
-                "serviceId":       svc_id,
-                "servNm":          title,
-                "jurMnofNm":       org.get_text(strip=True) if org else "보건복지부",
-                "lifeNmArray":     life_cat.get_text(strip=True) if life_cat else "",
-                "trgterIndvdlNm":  target.get_text(strip=True) if target else "",
-                "sigunguNm":       "전국",
-                "alwServBgngYmd":  "",
-                "alwServEndYmd":   "",
-                "srvAmt":          "",
-            })
-
-        time.sleep(0.5)
+        data  = resp.json()
+        items = data.get("dsServiceList0", [])
         return items
-
     except Exception as e:
-        print(f"  [복지로 크롤링 오류] {e}")
+        print(f"  [복지로 오류] {e}")
         return []
 
 
-def fetch_youth_jobs(page: int = 1, per_page: int = 20) -> list:
-    """온통청년 크롤링 — 청년·취업 지원사업"""
-    import time
-    from bs4 import BeautifulSoup
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
-    }
-    try:
-        resp = requests.get(
-            "https://www.youthcenter.go.kr/youngPlcyUnif/youngPlcyUnifList.do",
-            params={"pageIndex": page, "pageSize": per_page},
-            headers=headers,
-            timeout=15,
-        )
-        soup = BeautifulSoup(resp.text, "html.parser")
-        items = []
-
-        for row in soup.select(".policy-list li, ul.list li, table tbody tr"):
-            a_tag = row.select_one("a")
-            if not a_tag:
-                continue
-            href   = a_tag.get("href", "")
-            svc_id = href.split("plcyNo=")[-1].split("&")[0] if "plcyNo=" in href else ""
-            title  = a_tag.get_text(strip=True)
-
-            org     = row.select_one(".org, .instt, td:nth-child(3)")
-            emp_type = row.select_one(".type, .category, td:nth-child(2)")
-            target  = row.select_one(".target, td:nth-child(4)")
-
-            # 접수기간
-            period = row.select_one(".period, .date, td:nth-child(5)")
-            start, end = "", ""
-            if period:
-                text = period.get_text(strip=True)
-                if "~" in text:
-                    parts = text.split("~")
-                    start = parts[0].strip().replace(".", "").replace("-", "")
-                    end   = parts[1].strip().replace(".", "").replace("-", "")
-
-            items.append({
-                "empSvcId":    svc_id,
-                "empSvcNm":    title,
-                "insttNm":     org.get_text(strip=True) if org else "한국고용정보원",
-                "empSvcTypNm": emp_type.get_text(strip=True) if emp_type else "",
-                "trgterNm":    target.get_text(strip=True) if target else "청년",
-                "ctpvNm":      "전국",
-                "rcptBgngYmd": start,
-                "rcptEndYmd":  end,
-                "sprtScaleNm": "",
-                "dtlUrl":      f"https://www.youthcenter.go.kr{href}" if href.startswith("/") else href,
-            })
-
-        time.sleep(0.5)
-        return items
-
-    except Exception as e:
-        print(f"  [온통청년 크롤링 오류] {e}")
-        return []
-
-
-def fetch_youth_jobs_additional(page: int = 1, per_page: int = 20) -> list:
-    """고용24 크롤링 — 중장년·일반 취업지원사업"""
-    import time
-    from bs4 import BeautifulSoup
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
-    }
-    try:
-        resp = requests.get(
-            "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSupportList.do",
-            params={"pageIndex": page + 1, "pageSize": per_page,
-                    "pageUnit": "json"},
-            headers=headers,
-            timeout=15,
-        )
-        # work24는 JSON 응답 시도
-        try:
-            data  = resp.json()
-            rows  = data.get("list", data.get("resultList", []))
-        except Exception:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, "html.parser")
-            rows = []
-            for row in soup.select("table tbody tr"):
-                cols = row.select("td")
-                if len(cols) < 3:
-                    continue
-                a_tag = row.select_one("a")
-                rows.append({
-                    "empSvcId":    "",
-                    "empSvcNm":    a_tag.get_text(strip=True) if a_tag else cols[1].get_text(strip=True),
-                    "insttNm":     cols[2].get_text(strip=True) if len(cols) > 2 else "",
-                    "empSvcTypNm": cols[1].get_text(strip=True) if len(cols) > 1 else "",
-                    "trgterNm":    "",
-                    "ctpvNm":      "전국",
-                    "rcptBgngYmd": "",
-                    "rcptEndYmd":  "",
-                    "sprtScaleNm": "",
-                    "dtlUrl":      "",
-                })
-            time.sleep(0.5)
-            return rows
-
-        items = []
-        for r in rows:
-            items.append({
-                "empSvcId":    r.get("svcId", ""),
-                "empSvcNm":    r.get("svcNm", r.get("title", "")),
-                "insttNm":     r.get("insttNm", ""),
-                "empSvcTypNm": r.get("svcTypNm", ""),
-                "trgterNm":    r.get("trgterNm", ""),
-                "ctpvNm":      r.get("ctpvNm", "전국"),
-                "rcptBgngYmd": r.get("rcptBgngYmd", ""),
-                "rcptEndYmd":  r.get("rcptEndYmd", ""),
-                "sprtScaleNm": "",
-                "dtlUrl":      r.get("dtlUrl", ""),
-            })
-        time.sleep(0.5)
-        return items
-
-    except Exception as e:
-        print(f"  [고용24 크롤링 오류] {e}")
-        return []
 
 
 
@@ -592,45 +444,27 @@ def normalize_bizinfo(item: dict) -> dict:
 
 
 def normalize_welfare(item: dict) -> dict:
-    title       = item.get("servNm", "")
-    life_cat    = item.get("lifeNmArray", "")
-    target_grp  = item.get("trgterIndvdlNm", "")  # 복지로 지원대상
+    svc_id   = item.get("WLFARE_INFO_ID", "")
+    title    = item.get("WLFARE_INFO_NM", "")
+    life_cat = item.get("CVLWL_REG_SCD_NM", "")   # 서비스 분류명
+    target   = item.get("RETURN_STR", "")           # 지원대상 키워드 포함
     return {
-        "ID":       item.get("serviceId", ""),
+        "ID":       svc_id,
         "제목":     title,
-        "기관":     item.get("jurMnofNm", ""),
+        "기관":     item.get("BIZ_CHR_INST_NM", "보건복지부"),
         "카테고리": "복지·생활",
-        "세부분류": detect_welfare_subcategory(title, life_cat + target_grp),
+        "세부분류": detect_welfare_subcategory(title, life_cat + target),
         "지원유형": life_cat,
-        "지원대상": target_grp,
-        "지역":     item.get("sigunguNm", "전국"),
-        "접수시작": item.get("alwServBgngYmd", ""),
-        "접수마감": item.get("alwServEndYmd", ""),
-        "지원규모": item.get("srvAmt", ""),
-        "URL":      f"https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId={item.get('serviceId','')}",
+        "지원대상": item.get("WLFARE_INFO_OUTL_CN", "")[:50],
+        "지역":     item.get("ADDR", "전국") or "전국",
+        "접수시작": item.get("ENFC_BGNG_YMD", ""),
+        "접수마감": item.get("ENFC_END_YMD", ""),
+        "지원규모": "",
+        "URL":      f"https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId={svc_id}",
         "출처":     "복지로",
     }
 
 
-def normalize_youth(item: dict) -> dict:
-    title    = item.get("empSvcNm", "")
-    emp_type = item.get("empSvcTypNm", "")
-    target   = item.get("trgterNm", "")      # 고용24 지원대상
-    return {
-        "ID":       item.get("empSvcId", ""),
-        "제목":     title,
-        "기관":     item.get("insttNm", ""),
-        "카테고리": "청년·취업",
-        "세부분류": detect_employment_subcategory(title, emp_type + target),
-        "지원유형": emp_type,
-        "지원대상": target,
-        "지역":     item.get("ctpvNm", "전국"),
-        "접수시작": item.get("rcptBgngYmd", ""),
-        "접수마감": item.get("rcptEndYmd", ""),
-        "지원규모": item.get("sprtScaleNm", ""),
-        "URL":      item.get("dtlUrl", ""),
-        "출처":     "고용24",
-    }
 
 
 
@@ -902,7 +736,7 @@ def run_gov_support():
 
     print(f"\n{'='*55}")
     print(f"  정부 지원사업 통합 수집기")
-    print(f"  수집 대상: 기업마당 · 소진공 · 복지로 · 고용24 · 농림부")
+    print(f"  수집 대상: 기업마당 · 복지로")
     print(f"  마감 임박 기준: {alert_days}일 이내")
 
     # 프로필 요약 출력
@@ -936,16 +770,6 @@ def run_gov_support():
     items = fetch_welfare(per_page=100)
     raw.extend([normalize_welfare(i) for i in items if i])
     print(f"  → {len(items)}건")
-
-    print("  [고용24] 청년·취업·중장년 수집 중...")
-    items = fetch_youth_jobs(per_page=100)
-    raw.extend([normalize_youth(i) for i in items if i])
-    print(f"  → {len(items)}건")
-
-    print("  [고용24] 추가 취업지원 수집 중...")
-    items2 = fetch_youth_jobs_additional(per_page=100)
-    raw.extend([normalize_youth(i) for i in items2 if i])
-    print(f"  → {len(items2)}건")
 
     # 필터
     filtered = [r for r in raw if passes_filter(r, cfg)]
