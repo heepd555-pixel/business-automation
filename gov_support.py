@@ -292,29 +292,65 @@ def _get_items(url: str, params: dict, path: list, label: str) -> list:
         return []
 
 
-def fetch_bizinfo(page: int = 1, per_page: int = 100) -> list:
-    """기업마당 — 소상공인·중소기업·창업 지원사업"""
+def fetch_bizinfo(page: int = 1, per_page: int = 20) -> list:
+    """기업마당 크롤링 — API 없이 공개 공고 목록 수집"""
+    import time
+    from bs4 import BeautifulSoup
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
     try:
         resp = requests.get(
-            "https://apis.data.go.kr/B552735/bizinfoService/getOptrPbancList",
-            params={
-                "serviceKey": PUBLIC_API_KEY,
-                "pageNo": page,
-                "numOfRows": per_page,
-                "returnType": "json",
-            },
+            "https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do",
+            params={"pageIndex": page, "recordCountPerPage": per_page},
+            headers=headers,
             timeout=15,
         )
-        data = resp.json()
-        items = (
-            data.get("response", {})
-                .get("body", {})
-                .get("items", {})
-                .get("item", [])
-        )
-        return items if isinstance(items, list) else [items]
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = []
+
+        for row in soup.select("table tbody tr"):
+            cols = row.select("td")
+            if len(cols) < 4:
+                continue
+
+            # 제목 + 공고번호
+            a_tag = row.select_one("td a")
+            if not a_tag:
+                continue
+            href  = a_tag.get("href", "")
+            sn    = href.split("pbanc_sn=")[-1].split("&")[0] if "pbanc_sn=" in href else ""
+            title = a_tag.get_text(strip=True)
+
+            # 접수기간 "2024.01.01 ~ 2024.03.31" 파싱
+            period = cols[3].get_text(strip=True) if len(cols) > 3 else ""
+            start, end = "", ""
+            if "~" in period:
+                parts = period.split("~")
+                start = parts[0].strip().replace(".", "")
+                end   = parts[1].strip().replace(".", "")
+
+            items.append({
+                "pbancSn":     sn,
+                "pbancNm":     title,
+                "sprtTypeNm":  cols[2].get_text(strip=True) if len(cols) > 2 else "",
+                "rcptBgngYmd": start,
+                "rcptEndYmd":  end,
+                "insttNm":     cols[4].get_text(strip=True) if len(cols) > 4 else "",
+                "ctpvNm":      "전국",
+                "sprtScaleNm": "",
+            })
+
+        time.sleep(0.5)  # 서버 부하 방지
+        return items
+
     except Exception as e:
-        print(f"  [기업마당 오류] {e}")
+        print(f"  [기업마당 크롤링 오류] {e}")
         return []
 
 
