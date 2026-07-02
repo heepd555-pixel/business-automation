@@ -1,7 +1,7 @@
 """
 정부 지원사업 통합 수집기
 공공데이터포털 공식 API 사용 (합법)
-기업마당 + 복지로 + 고용24 + 농림부
+기업마당 + 복지로 + 고용24
 """
 
 import os
@@ -32,7 +32,6 @@ CATEGORY_MAP = {
     "청년·취업":        ["청년", "취업", "구직", "일자리"],
     "창업":            ["창업", "벤처", "스타트업"],
     "복지·생활":        ["복지", "생활", "저소득", "장애", "노인", "육아", "출산"],
-    "농업·농촌":        ["농업", "농촌", "농어촌", "어업"],
 }
 
 # 복지로 지원서비스 세부 분류
@@ -137,50 +136,6 @@ EMPLOYMENT_SUBCATEGORY = {
     "외국인·다문화취업": [
         "고용허가제", "외국인근로자", "다문화취업",
         "결혼이민자취업", "이주민고용",
-    ],
-}
-
-# 농업·농촌 지원사업 세부 분류
-AGRICULTURE_SUBCATEGORY = {
-    "귀농·귀촌": [
-        "귀농", "귀촌", "귀어", "귀산촌",
-        "귀농창업", "귀농교육", "귀농정착",
-        "영농정착지원금", "청년농부",
-    ],
-    "스마트팜·첨단농업": [
-        "스마트팜", "스마트온실", "스마트축산",
-        "첨단농업", "ICT농업", "드론방제",
-        "농업데이터", "디지털농업",
-    ],
-    "영농자금·융자": [
-        "농업자금", "영농자금", "농신보",
-        "농업정책자금", "영농재해", "피해복구자금",
-        "농업경영체", "농지은행",
-    ],
-    "직불금·보조금": [
-        "직불금", "공익직불", "친환경직불",
-        "쌀직불", "밭직불", "농업보조금",
-        "농업지원금", "경영안정",
-    ],
-    "농산물판로·수출": [
-        "농산물판로", "농산물수출", "로컬푸드",
-        "직거래장터", "온라인판매", "농식품수출",
-        "6차산업", "농촌융복합",
-    ],
-    "축산·어업": [
-        "축산", "가축", "어업", "수산",
-        "어가", "어촌", "수산자원",
-        "어업인", "양식",
-    ],
-    "농촌복지·생활": [
-        "농촌복지", "농업인건강보험", "농업인연금",
-        "농촌마을", "농촌주거", "농업인안전",
-        "농업재해보험",
-    ],
-    "교육·컨설팅": [
-        "농업교육", "영농교육", "농촌체험",
-        "농업컨설팅", "농업기술", "농촌진흥",
-        "품목별기술", "농업연구",
     ],
 }
 
@@ -432,21 +387,6 @@ def fetch_smes_fund(page: int = 1, per_page: int = 100) -> list:
 
 
 
-def fetch_agriculture(page: int = 1, per_page: int = 100) -> list:
-    """농림축산식품부 — 농업·농촌 지원사업 (기업마당 농업 카테고리)"""
-    return _get_items(
-        "https://apis.data.go.kr/B552735/bizinfoService/getOptrPbancList",
-        {
-            "serviceKey": PUBLIC_API_KEY,
-            "pageNo": page,
-            "numOfRows": per_page,
-            "returnType": "json",
-            "suportType": "농업",
-        },
-        ["response", "body", "items", "item"],
-        "농업지원",
-    )
-
 
 def fetch_youth_jobs_additional(page: int = 1, per_page: int = 100) -> list:
     """고용24 추가 — 중장년·특수고용 지원사업"""
@@ -483,9 +423,6 @@ def detect_welfare_subcategory(title: str, life_category: str) -> str:
 def detect_employment_subcategory(title: str, emp_type: str) -> str:
     return _detect_subcategory(title + emp_type, EMPLOYMENT_SUBCATEGORY, "기타취업지원")
 
-
-def detect_agriculture_subcategory(title: str, support_type: str) -> str:
-    return _detect_subcategory(title + support_type, AGRICULTURE_SUBCATEGORY, "기타농업지원")
 
 
 def normalize_bizinfo(item: dict) -> dict:
@@ -550,25 +487,6 @@ def normalize_youth(item: dict) -> dict:
         "출처":     "고용24",
     }
 
-
-def normalize_agriculture(item: dict) -> dict:
-    title   = item.get("pbancNm", "")
-    sp_type = item.get("sprtTypeNm", "")
-    return {
-        "ID":       item.get("pbancSn", ""),
-        "제목":     title,
-        "기관":     item.get("insttNm", ""),
-        "카테고리": "농업·농촌",
-        "세부분류": detect_agriculture_subcategory(title, sp_type),
-        "지원유형": sp_type,
-        "지원대상": item.get("trgterNm", "농업인"),
-        "지역":     item.get("ctpvNm", "전국"),
-        "접수시작": item.get("rcptBgngYmd", ""),
-        "접수마감": item.get("rcptEndYmd", ""),
-        "지원규모": item.get("sprtScaleNm", ""),
-        "URL":      f"https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pbanc_sn={item.get('pbancSn','')}",
-        "출처":     "농림부(기업마당)",
-    }
 
 
 # ─── 필터·분류 ────────────────────────────────────────────────
@@ -883,11 +801,6 @@ def run_gov_support():
     items2 = fetch_youth_jobs_additional(per_page=100)
     raw.extend([normalize_youth(i) for i in items2 if i])
     print(f"  → {len(items2)}건")
-
-    print("  [농림부] 농업·농촌 지원사업 수집 중...")
-    items = fetch_agriculture(per_page=100)
-    raw.extend([normalize_agriculture(i) for i in items if i])
-    print(f"  → {len(items)}건")
 
     # 필터
     filtered = [r for r in raw if passes_filter(r, cfg)]
