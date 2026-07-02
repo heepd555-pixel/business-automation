@@ -35,20 +35,63 @@ CATEGORY_MAP = {
     "농업·농촌":        ["농업", "농촌", "농어촌", "어업"],
 }
 
-# 고용상태별 관련 키워드
-EMPLOYMENT_KEYWORDS = {
-    "취업준비생": ["취업준비", "구직", "일자리", "취업지원", "청년취업"],
-    "재직자":    ["재직자", "근로자", "직장인", "고용유지"],
-    "사업자":    ["사업자", "소상공인", "중소기업", "자영업"],
-    "프리랜서":  ["프리랜서", "1인", "창작자", "특수고용", "플랫폼종사자", "창업"],
-    "무직":      ["실업", "구직", "취업준비", "실직", "고용보험"],
-}
+# 프로필 항목별 매칭 키워드
+PROFILE_KEYWORDS = {
+    # 고용상태
+    "취업준비생":   ["취업준비", "구직", "일자리", "취업지원", "청년취업", "취업성공"],
+    "재직자":       ["재직자", "근로자", "직장인", "고용유지", "근무중"],
+    "사업자":       ["사업자", "소상공인", "중소기업", "자영업", "소기업"],
+    "프리랜서":     ["프리랜서", "1인", "특수고용", "플랫폼종사자", "독립계약자"],
+    "무직":         ["실업", "구직", "실직", "비경제활동"],
+    "경력단절":     ["경력단절", "경단녀", "재취업", "새일"],
+    "육아휴직중":   ["육아휴직", "출산휴가", "모성보호"],
+    "퇴직자":       ["퇴직", "명예퇴직", "조기퇴직", "중장년"],
 
-# 나이대별 키워드
-AGE_KEYWORDS = {
-    (15, 34): ["청년", "청소년"],
-    (40, 65): ["중장년", "신중년"],
-    (65, 99): ["노인", "시니어", "고령"],
+    # 나이대
+    "청소년(15-18)": ["청소년", "고등학생"],
+    "청년(19-34)":   ["청년", "청년층", "청년지원"],
+    "중장년(40-64)": ["중장년", "신중년", "중년"],
+    "노인(65+)":     ["노인", "어르신", "시니어", "고령자", "노년"],
+
+    # 성별
+    "여성":          ["여성", "여성기업", "경단녀", "모성", "임산부", "산모", "육아"],
+    "남성":          ["남성", "부성", "아버지"],
+
+    # 가족상황
+    "임신여부":      ["임산부", "임신", "출산", "산모", "태아"],
+    "한부모가족":    ["한부모", "모자가정", "부자가정", "미혼모", "미혼부"],
+    "조손가족":      ["조손", "조부모", "손자"],
+    "다문화가족":    ["다문화", "결혼이민자", "외국인배우자"],
+    "다자녀":        ["다자녀", "셋째", "다둥이", "출산장려"],
+    "영아(0-2세)":   ["영아", "신생아", "0세", "1세", "2세", "영유아"],
+    "유아(3-7세)":   ["유아", "어린이집", "유치원", "보육"],
+    "초등(8-13세)":  ["초등학생", "방과후", "돌봄"],
+    "청소년자녀":    ["청소년자녀", "중고등학생"],
+
+    # 주거
+    "무주택":        ["무주택", "전세", "월세", "주거취약", "청약"],
+    "기초수급자":    ["기초생활", "수급자", "생계급여", "의료급여"],
+    "차상위계층":    ["차상위", "저소득", "취약계층"],
+
+    # 건강·장애
+    "장애인":        ["장애인", "장애", "장애우", "장애등급"],
+    "만성질환":      ["만성질환", "고혈압", "당뇨", "암환자", "희귀질환"],
+    "국가유공자":    ["국가유공자", "보훈", "참전"],
+
+    # 학력·교육
+    "국비교육":      ["국비", "직업훈련", "내일배움카드", "훈련수당"],
+    "재학중":        ["재학생", "대학생", "재학"],
+
+    # 사업·창업
+    "예비창업":      ["예비창업", "창업준비", "창업희망"],
+    "초기창업":      ["초기창업", "창업 1년", "창업 2년", "창업 3년"],
+    "소상공인":      ["소상공인", "영세", "자영업자"],
+    "여성기업인":    ["여성기업", "여성창업", "여성사업"],
+    "농어업인":      ["농업인", "어업인", "농어민", "귀농"],
+
+    # 특수상황
+    "북한이탈주민":  ["탈북", "북한이탈", "새터민"],
+    "사회적기업":    ["사회적기업", "협동조합", "사회혁신"],
 }
 
 
@@ -208,69 +251,122 @@ def detect_category(item: dict) -> str:
     return item.get("카테고리", "기타")
 
 
-def passes_profile_filter(item: dict, cfg: dict) -> bool:
+def build_active_keywords(profile: dict) -> list:
+    """프로필에서 활성화된 키워드 목록 추출"""
+    active = []
+    기본 = profile.get("기본정보", {})
+    가족 = profile.get("가족상황", {})
+    고용 = profile.get("고용소득", {})
+    건강 = profile.get("건강장애", {})
+    주거 = profile.get("주거상황", {})
+    학력 = profile.get("학력교육", {})
+    사업 = profile.get("사업창업", {})
+    특수 = profile.get("특수상황", {})
+
+    # 나이대
+    age = 기본.get("나이", 0)
+    if age:
+        if 15 <= age <= 18: active += PROFILE_KEYWORDS["청소년(15-18)"]
+        if 19 <= age <= 34: active += PROFILE_KEYWORDS["청년(19-34)"]
+        if 40 <= age <= 64: active += PROFILE_KEYWORDS["중장년(40-64)"]
+        if age >= 65:       active += PROFILE_KEYWORDS["노인(65+)"]
+
+    # 성별
+    gender = 기본.get("성별", "")
+    if gender == "여성": active += PROFILE_KEYWORDS["여성"]
+    if gender == "남성": active += PROFILE_KEYWORDS["남성"]
+
+    # 가족상황
+    if 가족.get("임신여부"):      active += PROFILE_KEYWORDS["임신여부"]
+    if 가족.get("한부모가족"):    active += PROFILE_KEYWORDS["한부모가족"]
+    if 가족.get("조손가족"):      active += PROFILE_KEYWORDS["조손가족"]
+    if 가족.get("다문화가족"):    active += PROFILE_KEYWORDS["다문화가족"]
+    if 가족.get("자녀수", 0) >= 3: active += PROFILE_KEYWORDS["다자녀"]
+    for 나이대 in 가족.get("자녀나이대", []):
+        if 나이대 in PROFILE_KEYWORDS:
+            active += PROFILE_KEYWORDS[나이대]
+
+    # 고용상태
+    emp = 고용.get("고용상태", {})
+    for status, active_flag in emp.items():
+        if active_flag and status in PROFILE_KEYWORDS:
+            active += PROFILE_KEYWORDS[status]
+
+    # 소득 기준 (중위소득)
+    income = 고용.get("월소득(만원)", 0)
+    if income and income <= 111:  active += ["기초생활", "수급자"]
+    elif income and income <= 222: active += ["저소득", "차상위"]
+
+    # 건강·장애
+    if 건강.get("장애인등록"):   active += PROFILE_KEYWORDS["장애인"]
+    if 건강.get("만성질환보유"): active += PROFILE_KEYWORDS["만성질환"]
+    if 건강.get("국가유공자"):   active += PROFILE_KEYWORDS["국가유공자"]
+
+    # 주거
+    if 주거.get("무주택"):         active += PROFILE_KEYWORDS["무주택"]
+    if 주거.get("기초생활수급자"): active += PROFILE_KEYWORDS["기초수급자"]
+    if 주거.get("차상위계층"):     active += PROFILE_KEYWORDS["차상위계층"]
+
+    # 학력·교육
+    if 학력.get("국비교육수강중"): active += PROFILE_KEYWORDS["국비교육"]
+    if 학력.get("재학중"):         active += PROFILE_KEYWORDS["재학중"]
+
+    # 사업·창업
+    if 사업.get("예비창업자"):   active += PROFILE_KEYWORDS["예비창업"]
+    if 사업.get("소상공인"):     active += PROFILE_KEYWORDS["소상공인"]
+    if 사업.get("여성기업인"):   active += PROFILE_KEYWORDS["여성기업인"]
+    창업연차 = 사업.get("창업연차", 0)
+    if 0 < 창업연차 <= 3:        active += PROFILE_KEYWORDS["초기창업"]
+
+    # 특수상황
+    if 특수.get("북한이탈주민"): active += PROFILE_KEYWORDS["북한이탈주민"]
+    if 특수.get("농어업인"):     active += PROFILE_KEYWORDS["농어업인"]
+    if 특수.get("사회적기업운영"): active += PROFILE_KEYWORDS["사회적기업"]
+
+    # 관심 키워드 직접 추가
+    active += profile.get("관심키워드", [])
+
+    return list(set(active))
+
+
+def passes_profile_filter(item: dict, profile: dict) -> bool:
     """프로필 기반 필터링"""
-    profile = cfg.get("내_프로필", {})
     title = item.get("제목", "") + item.get("지원유형", "")
 
-    # 제외 키워드 — 하나라도 포함되면 제외
+    # 제외 키워드
     for kw in profile.get("제외키워드", []):
         if kw in title:
             return False
 
-    # 관심 키워드 — 입력된 경우 하나라도 포함돼야 통과
-    interest = profile.get("관심키워드", [])
-    if interest and not any(kw in title for kw in interest):
-        # 관심 키워드 없으면 고용상태·나이 키워드로 보완
-        pass_by_employment = False
-        pass_by_age = False
-
-        # 고용상태 매칭
-        employment = profile.get("고용상태", {})
-        for status, active in employment.items():
-            if active:
-                kws = EMPLOYMENT_KEYWORDS.get(status, [])
-                if any(kw in title for kw in kws):
-                    pass_by_employment = True
-                    break
-
-        # 나이 매칭
-        age = profile.get("나이", 0)
-        if age:
-            for (min_age, max_age), kws in AGE_KEYWORDS.items():
-                if min_age <= age <= max_age:
-                    if any(kw in title for kw in kws):
-                        pass_by_age = True
-                        break
-
-        if not pass_by_employment and not pass_by_age:
-            return False
-
     # 지역 매칭
-    region = profile.get("거주지역", "").strip()
+    region = profile.get("기본정보", {}).get("거주지역", "").strip()
     item_region = item.get("지역", "전국")
     if region and "전국" not in item_region and region not in item_region:
+        return False
+
+    # 활성 키워드 매칭
+    active_kws = build_active_keywords(profile)
+    if active_kws and not any(kw in title for kw in active_kws):
         return False
 
     return True
 
 
 def passes_filter(item: dict, cfg: dict) -> bool:
-    """프로필 필터 적용"""
     profile = cfg.get("내_프로필", {})
+    기본 = profile.get("기본정보", {})
+    고용 = profile.get("고용소득", {})
 
-    # 프로필이 비어있으면 전체 수집
     has_profile = (
-        profile.get("나이", 0) > 0
-        or profile.get("거주지역", "").strip()
-        or any(profile.get("고용상태", {}).values())
+        기본.get("나이", 0) > 0
+        or 기본.get("성별", "").strip()
+        or 기본.get("거주지역", "").strip()
+        or any(고용.get("고용상태", {}).values())
         or profile.get("관심키워드")
-        or profile.get("제외키워드")
     )
 
     if has_profile:
-        return passes_profile_filter(item, cfg)
-
+        return passes_profile_filter(item, profile)
     return True
 
 
@@ -417,16 +513,22 @@ def run_gov_support():
     print(f"  마감 임박 기준: {alert_days}일 이내")
 
     # 프로필 요약 출력
-    age = profile.get("나이", 0)
-    region = profile.get("거주지역", "")
-    emp = [k for k, v in profile.get("고용상태", {}).items() if v]
-    interests = profile.get("관심키워드", [])
-    if age or region or emp or interests:
+    기본 = profile.get("기본정보", {})
+    고용 = profile.get("고용소득", {})
+    age    = 기본.get("나이", 0)
+    gender = 기본.get("성별", "")
+    region = 기본.get("거주지역", "")
+    emp    = [k for k, v in 고용.get("고용상태", {}).items() if v]
+    active_kws = build_active_keywords(profile)
+
+    if age or gender or region or emp:
         print(f"\n  내 프로필")
-        if age:      print(f"    나이:     {age}세")
-        if region:   print(f"    지역:     {region}")
-        if emp:      print(f"    고용상태: {', '.join(emp)}")
-        if interests: print(f"    관심키워드: {', '.join(interests)}")
+        if age:    print(f"    나이:      {age}세")
+        if gender: print(f"    성별:      {gender}")
+        if region: print(f"    지역:      {region}")
+        if emp:    print(f"    고용상태:  {', '.join(emp)}")
+        if active_kws:
+            print(f"    매칭키워드: {', '.join(active_kws[:10])}{'...' if len(active_kws)>10 else ''}")
     print(f"{'='*55}\n")
 
     # 수집
