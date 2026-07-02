@@ -1,7 +1,7 @@
 """
 정부 지원사업 통합 수집기
 공공데이터포털 공식 API 사용 (합법)
-기업마당 + 소진공 + 복지로 + 고용24 + 농림부
+기업마당 + 복지로 + 고용24 + 농림부
 """
 
 import os
@@ -431,20 +431,6 @@ def fetch_smes_fund(page: int = 1, per_page: int = 100) -> list:
     )
 
 
-def fetch_soss(page: int = 1, per_page: int = 100) -> list:
-    """소상공인시장진흥공단 — 소상공인 지원사업"""
-    return _get_items(
-        "https://apis.data.go.kr/B552735/bizinfoService/getSossSupportList",
-        {
-            "serviceKey": PUBLIC_API_KEY,
-            "pageNo": page,
-            "numOfRows": per_page,
-            "returnType": "json",
-        },
-        ["response", "body", "items", "item"],
-        "소진공",
-    )
-
 
 def fetch_agriculture(page: int = 1, per_page: int = 100) -> list:
     """농림축산식품부 — 농업·농촌 지원사업 (기업마당 농업 카테고리)"""
@@ -521,23 +507,6 @@ def normalize_bizinfo(item: dict) -> dict:
     }
 
 
-
-def normalize_soss(item: dict) -> dict:
-    title = item.get("pbancNm", "")
-    return {
-        "ID":       item.get("pbancSn", ""),
-        "제목":     title,
-        "기관":     item.get("insttNm", "소상공인시장진흥공단"),
-        "카테고리": "소상공인·중소기업",
-        "세부분류": detect_sme_subcategory(title, "소상공인"),
-        "지원유형": item.get("sprtTypeNm", ""),
-        "지역":     item.get("ctpvNm", "전국"),
-        "접수시작": item.get("rcptBgngYmd", ""),
-        "접수마감": item.get("rcptEndYmd", ""),
-        "지원규모": item.get("sprtScaleNm", ""),
-        "URL":      "https://www.semas.or.kr/web/SUB03/subpage03.kmdc",
-        "출처":     "소진공",
-    }
 
 
 def normalize_welfare(item: dict) -> dict:
@@ -898,11 +867,6 @@ def run_gov_support():
     print("  [기업마당] 소상공인·중소기업 수집 중...")
     items = fetch_bizinfo(per_page=100)
     raw.extend([normalize_bizinfo(i) for i in items if i])
-    print(f"  → {len(items)}건")
-
-    print("  [소진공] 소상공인 전용 수집 중...")
-    items = fetch_soss(per_page=100)
-    raw.extend([normalize_soss(i) for i in items if i])
     print(f"  → {len(items)}건")
 
     print("  [복지로] 복지·생활 수집 중...")
