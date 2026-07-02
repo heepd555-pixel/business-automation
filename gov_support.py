@@ -1,7 +1,7 @@
 """
 정부 지원사업 통합 수집기
 공공데이터포털 공식 API 사용 (합법)
-기업마당(소상공인·중소기업·창업) + 복지로(복지·생활) + 고용24(청년·취업)
+기업마당 + K-스타트업 + 소진공 + 복지로 + 고용24 + 농림부
 """
 
 import os
@@ -33,6 +33,213 @@ CATEGORY_MAP = {
     "창업":            ["창업", "벤처", "스타트업"],
     "복지·생활":        ["복지", "생활", "저소득", "장애", "노인", "육아", "출산"],
     "농업·농촌":        ["농업", "농촌", "농어촌", "어업"],
+}
+
+# 복지로 지원서비스 세부 분류
+WELFARE_SUBCATEGORY = {
+    "생계지원": [
+        "생계급여", "긴급복지", "긴급생계", "식품지원",
+        "푸드뱅크", "에너지바우처", "냉난방", "연료비",
+        "이웃돕기", "긴급지원",
+    ],
+    "주거지원": [
+        "주거급여", "전세자금", "월세지원", "주거비",
+        "주택개보수", "임시주거", "쉼터", "공공임대",
+        "주거취약", "전월세",
+    ],
+    "의료·건강": [
+        "의료급여", "건강보험", "의료비지원", "치료비",
+        "재활", "정신건강", "정신질환", "희귀질환",
+        "암검진", "건강검진", "치과", "한방",
+    ],
+    "교육·보육": [
+        "교육급여", "보육료", "양육수당", "아동수당",
+        "교육비지원", "학습지원", "방과후", "돌봄",
+        "급식지원", "교육청", "학교", "장학금",
+    ],
+    "노인·경로": [
+        "기초연금", "노인일자리", "치매", "독거노인",
+        "노인복지", "경로당", "노인돌봄", "재가서비스",
+        "방문간호", "노인인지", "노인학대",
+    ],
+    "장애인": [
+        "장애인연금", "장애수당", "활동지원", "보조기기",
+        "발달재활", "언어치료", "장애아동", "장애인취업",
+        "장애인주거", "장애인의료", "중증장애",
+    ],
+    "임신·출산": [
+        "임산부", "임신", "출산지원", "산모신생아",
+        "난임시술", "난임지원", "출산장려금", "첫만남이용권",
+        "임신출산진료비", "산후조리",
+    ],
+    "아동·청소년": [
+        "아동수당", "드림스타트", "지역아동센터",
+        "청소년지원", "청소년쉼터", "학교밖청소년",
+        "아동급식", "아동보호", "가정위탁",
+    ],
+    "한부모·다문화": [
+        "한부모", "미혼모", "미혼부", "양육비",
+        "다문화가족", "결혼이민자", "이주여성",
+        "가족센터", "다문화교육",
+    ],
+    "자활·사회참여": [
+        "자활사업", "자활기업", "근로능력",
+        "자원봉사", "사회참여", "노인사회활동",
+        "노인자원봉사", "봉사활동",
+    ],
+}
+
+# 고용24 취업지원 세부 분류
+EMPLOYMENT_SUBCATEGORY = {
+    "청년취업": [
+        "청년", "청년도약", "청년내일저축", "청년구직활동지원금",
+        "청년취업사관학교", "청년일경험", "청년월세", "청년저축",
+        "청년인턴", "청년고용",
+    ],
+    "중장년취업": [
+        "중장년", "신중년", "재취직", "중장년내일센터",
+        "신중년경력형", "퇴직자", "장년", "50대", "60대",
+    ],
+    "장애인고용": [
+        "장애인취업", "장애인고용", "장애인고용장려금",
+        "보조공학", "장애인직업훈련", "장애인인턴",
+        "중증장애인지원고용",
+    ],
+    "여성취업": [
+        "경력단절", "경단녀", "새일센터", "여성취업",
+        "여성가장", "직장어린이집", "출산후재취업",
+        "여성고용",
+    ],
+    "취업지원서비스": [
+        "취업성공패키지", "국민취업지원제도",
+        "구직급여", "취업지원", "고용센터",
+        "취업상담", "직업진로", "취업알선",
+    ],
+    "직업훈련": [
+        "국민내일배움카드", "내일배움카드", "직업훈련",
+        "K-디지털", "산업전환훈련", "사업주훈련",
+        "직업능력", "기술훈련", "직무교육",
+    ],
+    "고용장려·일자리창출": [
+        "고용장려금", "일자리창출", "지역일자리",
+        "사회적일자리", "공공일자리", "노인일자리",
+        "청년일자리", "사회서비스일자리",
+    ],
+    "실업급여·소득지원": [
+        "실업급여", "구직급여", "조기재취업수당",
+        "연장급여", "훈련연장급여", "개별연장급여",
+    ],
+    "특수고용·플랫폼": [
+        "특수고용", "특수형태근로", "플랫폼종사자",
+        "프리랜서", "1인사업자", "예술인고용보험",
+        "노무제공자",
+    ],
+    "외국인·다문화취업": [
+        "고용허가제", "외국인근로자", "다문화취업",
+        "결혼이민자취업", "이주민고용",
+    ],
+}
+
+# 농업·농촌 지원사업 세부 분류
+AGRICULTURE_SUBCATEGORY = {
+    "귀농·귀촌": [
+        "귀농", "귀촌", "귀어", "귀산촌",
+        "귀농창업", "귀농교육", "귀농정착",
+        "영농정착지원금", "청년농부",
+    ],
+    "스마트팜·첨단농업": [
+        "스마트팜", "스마트온실", "스마트축산",
+        "첨단농업", "ICT농업", "드론방제",
+        "농업데이터", "디지털농업",
+    ],
+    "영농자금·융자": [
+        "농업자금", "영농자금", "농신보",
+        "농업정책자금", "영농재해", "피해복구자금",
+        "농업경영체", "농지은행",
+    ],
+    "직불금·보조금": [
+        "직불금", "공익직불", "친환경직불",
+        "쌀직불", "밭직불", "농업보조금",
+        "농업지원금", "경영안정",
+    ],
+    "농산물판로·수출": [
+        "농산물판로", "농산물수출", "로컬푸드",
+        "직거래장터", "온라인판매", "농식품수출",
+        "6차산업", "농촌융복합",
+    ],
+    "축산·어업": [
+        "축산", "가축", "어업", "수산",
+        "어가", "어촌", "수산자원",
+        "어업인", "양식",
+    ],
+    "농촌복지·생활": [
+        "농촌복지", "농업인건강보험", "농업인연금",
+        "농촌마을", "농촌주거", "농업인안전",
+        "농업재해보험",
+    ],
+    "교육·컨설팅": [
+        "농업교육", "영농교육", "농촌체험",
+        "농업컨설팅", "농업기술", "농촌진흥",
+        "품목별기술", "농업연구",
+    ],
+}
+
+# 중소벤처기업부 지원사업 세부 분류
+SME_SUBCATEGORY = {
+    "정책자금·융자": [
+        "정책자금", "융자", "대출", "보증",
+        "창업기업지원자금", "신성장기반자금",
+        "긴급경영안정자금", "소상공인정책자금",
+        "특별경영안정자금", "혁신창업사업화자금",
+    ],
+    "보조금·지원금": [
+        "보조금", "지원금", "바우처", "지원사업",
+        "사업화자금", "지원비용", "수당",
+    ],
+    "창업지원": [
+        "예비창업패키지", "초기창업패키지", "창업도약패키지",
+        "창업성장기술개발", "TIPS", "팁스",
+        "창업도전500", "글로벌창업", "창업인프라",
+        "창업보육센터", "액셀러레이터",
+        "창업경진대회", "창업지원센터",
+    ],
+    "기술개발·R&D": [
+        "기술개발", "R&D", "연구개발", "기술혁신",
+        "중소기업기술개발", "혁신형중소기업",
+        "IP나래", "기술보호", "특허",
+    ],
+    "수출·판로": [
+        "수출바우처", "수출지원", "해외판로",
+        "내수기업수출", "글로벌마케팅",
+        "해외전시", "온라인수출", "직구역직구",
+        "수출컨소시엄", "해외지사화",
+    ],
+    "스마트화·디지털": [
+        "스마트공장", "스마트상점", "스마트공방",
+        "디지털전환", "AI도입", "자동화",
+        "스마트제조", "클라우드", "빅데이터",
+    ],
+    "소상공인특화": [
+        "소상공인", "자영업", "영세", "골목상권",
+        "노란우산공제", "재도전", "폐업지원",
+        "경영개선", "컨설팅", "점포환경개선",
+        "협업활성화", "공동브랜드",
+    ],
+    "인력·교육": [
+        "인력지원", "채용지원", "청년일자리",
+        "내일채움공제", "청년재직자", "인력양성",
+        "직업훈련", "역량강화", "멘토링",
+    ],
+    "투자·IR": [
+        "투자연계", "엔젤투자", "벤처투자",
+        "크라우드펀딩", "IR지원", "투자유치",
+        "성장사다리", "모태펀드",
+    ],
+    "인증·컨설팅": [
+        "이노비즈", "메인비즈", "벤처인증",
+        "경영컨설팅", "진단", "멘토링",
+        "ISO인증", "품질경영",
+    ],
 }
 
 # 프로필 항목별 매칭 키워드
@@ -116,6 +323,20 @@ def save_seen(ids: set):
 
 # ─── API 수집 ─────────────────────────────────────────────────
 
+def _get_items(url: str, params: dict, path: list, label: str) -> list:
+    """공통 API 호출 헬퍼"""
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        data = resp.json()
+        for key in path:
+            data = data.get(key, {})
+        items = data if isinstance(data, list) else ([data] if data else [])
+        return items
+    except Exception as e:
+        print(f"  [{label} 오류] {e}")
+        return []
+
+
 def fetch_bizinfo(page: int = 1, per_page: int = 100) -> list:
     """기업마당 — 소상공인·중소기업·창업 지원사업"""
     try:
@@ -194,50 +415,221 @@ def fetch_youth_jobs(page: int = 1, per_page: int = 100) -> list:
         return []
 
 
+def fetch_kstartup(page: int = 1, per_page: int = 100) -> list:
+    """창업진흥원 K-스타트업 — 창업 지원사업"""
+    return _get_items(
+        "https://apis.data.go.kr/B553077/strtpSportBizInfoService/getStrtpSportBizInfoList",
+        {
+            "serviceKey": PUBLIC_API_KEY,
+            "pageNo": page,
+            "numOfRows": per_page,
+            "returnType": "json",
+        },
+        ["response", "body", "items", "item"],
+        "K-스타트업",
+    )
+
+
+def fetch_smes_fund(page: int = 1, per_page: int = 100) -> list:
+    """중소벤처기업부 정책자금 — 융자·보조금"""
+    return _get_items(
+        "https://apis.data.go.kr/B552735/bizinfoService/getSmeFundList",
+        {
+            "serviceKey": PUBLIC_API_KEY,
+            "pageNo": page,
+            "numOfRows": per_page,
+            "returnType": "json",
+        },
+        ["response", "body", "items", "item"],
+        "중기부 정책자금",
+    )
+
+
+def fetch_soss(page: int = 1, per_page: int = 100) -> list:
+    """소상공인시장진흥공단 — 소상공인 지원사업"""
+    return _get_items(
+        "https://apis.data.go.kr/B552735/bizinfoService/getSossSupportList",
+        {
+            "serviceKey": PUBLIC_API_KEY,
+            "pageNo": page,
+            "numOfRows": per_page,
+            "returnType": "json",
+        },
+        ["response", "body", "items", "item"],
+        "소진공",
+    )
+
+
+def fetch_agriculture(page: int = 1, per_page: int = 100) -> list:
+    """농림축산식품부 — 농업·농촌 지원사업 (기업마당 농업 카테고리)"""
+    return _get_items(
+        "https://apis.data.go.kr/B552735/bizinfoService/getOptrPbancList",
+        {
+            "serviceKey": PUBLIC_API_KEY,
+            "pageNo": page,
+            "numOfRows": per_page,
+            "returnType": "json",
+            "suportType": "농업",
+        },
+        ["response", "body", "items", "item"],
+        "농업지원",
+    )
+
+
+def fetch_youth_jobs_additional(page: int = 1, per_page: int = 100) -> list:
+    """고용24 추가 — 중장년·특수고용 지원사업"""
+    return _get_items(
+        "https://apis.data.go.kr/1051000/EmployService/getEmployServiceList",
+        {
+            "serviceKey": PUBLIC_API_KEY,
+            "pageNo": page + 1,
+            "numOfRows": per_page,
+            "returnType": "json",
+        },
+        ["response", "body", "items", "item"],
+        "고용24(2페이지)",
+    )
+
+
 # ─── 정규화 ───────────────────────────────────────────────────
 
+def _detect_subcategory(text: str, category_dict: dict, default: str = "기타") -> str:
+    for sub, keywords in category_dict.items():
+        if any(kw in text for kw in keywords):
+            return sub
+    return default
+
+
+def detect_sme_subcategory(title: str, support_type: str) -> str:
+    return _detect_subcategory(title + support_type, SME_SUBCATEGORY, "기타지원")
+
+
+def detect_welfare_subcategory(title: str, life_category: str) -> str:
+    return _detect_subcategory(title + life_category, WELFARE_SUBCATEGORY, "기타복지")
+
+
+def detect_employment_subcategory(title: str, emp_type: str) -> str:
+    return _detect_subcategory(title + emp_type, EMPLOYMENT_SUBCATEGORY, "기타취업지원")
+
+
+def detect_agriculture_subcategory(title: str, support_type: str) -> str:
+    return _detect_subcategory(title + support_type, AGRICULTURE_SUBCATEGORY, "기타농업지원")
+
+
 def normalize_bizinfo(item: dict) -> dict:
+    title   = item.get("pbancNm", "")
+    sp_type = item.get("sprtTypeNm", "")
     return {
         "ID":       item.get("pbancSn", ""),
-        "제목":     item.get("pbancNm", ""),
+        "제목":     title,
         "기관":     item.get("insttNm", ""),
         "카테고리": "소상공인·중소기업",
-        "지원유형": item.get("sprtTypeNm", ""),
+        "세부분류": detect_sme_subcategory(title, sp_type),
+        "지원유형": sp_type,
         "지역":     item.get("ctpvNm", "전국"),
         "접수시작": item.get("rcptBgngYmd", ""),
         "접수마감": item.get("rcptEndYmd", ""),
+        "지원규모": item.get("sprtScaleNm", ""),
         "URL":      f"https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pbanc_sn={item.get('pbancSn','')}",
         "출처":     "기업마당",
     }
 
 
+def normalize_kstartup(item: dict) -> dict:
+    title = item.get("bizPbancNm", "")
+    return {
+        "ID":       item.get("bizPbancSn", ""),
+        "제목":     title,
+        "기관":     item.get("supOrgnNm", "창업진흥원"),
+        "카테고리": "창업",
+        "세부분류": detect_sme_subcategory(title, ""),
+        "지원유형": item.get("bizPbancTypNm", ""),
+        "지역":     item.get("ctpvNm", "전국"),
+        "접수시작": item.get("pbancBgngYmd", ""),
+        "접수마감": item.get("pbancEndYmd", ""),
+        "지원규모": item.get("sprtScaleNm", ""),
+        "URL":      f"https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do",
+        "출처":     "K-스타트업",
+    }
+
+
+def normalize_soss(item: dict) -> dict:
+    title = item.get("pbancNm", "")
+    return {
+        "ID":       item.get("pbancSn", ""),
+        "제목":     title,
+        "기관":     item.get("insttNm", "소상공인시장진흥공단"),
+        "카테고리": "소상공인·중소기업",
+        "세부분류": detect_sme_subcategory(title, "소상공인"),
+        "지원유형": item.get("sprtTypeNm", ""),
+        "지역":     item.get("ctpvNm", "전국"),
+        "접수시작": item.get("rcptBgngYmd", ""),
+        "접수마감": item.get("rcptEndYmd", ""),
+        "지원규모": item.get("sprtScaleNm", ""),
+        "URL":      "https://www.semas.or.kr/web/SUB03/subpage03.kmdc",
+        "출처":     "소진공",
+    }
+
+
 def normalize_welfare(item: dict) -> dict:
+    title       = item.get("servNm", "")
+    life_cat    = item.get("lifeNmArray", "")
+    target_grp  = item.get("trgterIndvdlNm", "")  # 복지로 지원대상
     return {
         "ID":       item.get("serviceId", ""),
-        "제목":     item.get("servNm", ""),
+        "제목":     title,
         "기관":     item.get("jurMnofNm", ""),
         "카테고리": "복지·생활",
-        "지원유형": item.get("lifeNmArray", ""),
+        "세부분류": detect_welfare_subcategory(title, life_cat + target_grp),
+        "지원유형": life_cat,
+        "지원대상": target_grp,
         "지역":     item.get("sigunguNm", "전국"),
-        "접수시작": "",
-        "접수마감": "",
+        "접수시작": item.get("alwServBgngYmd", ""),
+        "접수마감": item.get("alwServEndYmd", ""),
+        "지원규모": item.get("srvAmt", ""),
         "URL":      f"https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId={item.get('serviceId','')}",
         "출처":     "복지로",
     }
 
 
 def normalize_youth(item: dict) -> dict:
+    title    = item.get("empSvcNm", "")
+    emp_type = item.get("empSvcTypNm", "")
+    target   = item.get("trgterNm", "")      # 고용24 지원대상
     return {
         "ID":       item.get("empSvcId", ""),
-        "제목":     item.get("empSvcNm", ""),
+        "제목":     title,
         "기관":     item.get("insttNm", ""),
         "카테고리": "청년·취업",
-        "지원유형": item.get("empSvcTypNm", ""),
+        "세부분류": detect_employment_subcategory(title, emp_type + target),
+        "지원유형": emp_type,
+        "지원대상": target,
         "지역":     item.get("ctpvNm", "전국"),
         "접수시작": item.get("rcptBgngYmd", ""),
         "접수마감": item.get("rcptEndYmd", ""),
+        "지원규모": item.get("sprtScaleNm", ""),
         "URL":      item.get("dtlUrl", ""),
         "출처":     "고용24",
+    }
+
+
+def normalize_agriculture(item: dict) -> dict:
+    title   = item.get("pbancNm", "")
+    sp_type = item.get("sprtTypeNm", "")
+    return {
+        "ID":       item.get("pbancSn", ""),
+        "제목":     title,
+        "기관":     item.get("insttNm", ""),
+        "카테고리": "농업·농촌",
+        "세부분류": detect_agriculture_subcategory(title, sp_type),
+        "지원유형": sp_type,
+        "지원대상": item.get("trgterNm", "농업인"),
+        "지역":     item.get("ctpvNm", "전국"),
+        "접수시작": item.get("rcptBgngYmd", ""),
+        "접수마감": item.get("rcptEndYmd", ""),
+        "지원규모": item.get("sprtScaleNm", ""),
+        "URL":      f"https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pbanc_sn={item.get('pbancSn','')}",
+        "출처":     "농림부(기업마당)",
     }
 
 
@@ -509,7 +901,7 @@ def run_gov_support():
 
     print(f"\n{'='*55}")
     print(f"  정부 지원사업 통합 수집기")
-    print(f"  수집 대상: 기업마당 · 복지로 · 고용24")
+    print(f"  수집 대상: 기업마당 · K-스타트업 · 소진공 · 복지로 · 고용24 · 농림부")
     print(f"  마감 임박 기준: {alert_days}일 이내")
 
     # 프로필 요약 출력
@@ -533,25 +925,41 @@ def run_gov_support():
 
     # 수집
     raw = []
-    cat = cfg["필터조건"]["카테고리"]
 
-    if cat.get("소상공인·중소기업") or cat.get("창업") or cat.get("전체"):
-        print("  [기업마당] 수집 중...")
-        items = fetch_bizinfo(per_page=100)
-        raw.extend([normalize_bizinfo(i) for i in items])
-        print(f"  → {len(items)}건")
+    print("  [기업마당] 소상공인·중소기업 수집 중...")
+    items = fetch_bizinfo(per_page=100)
+    raw.extend([normalize_bizinfo(i) for i in items if i])
+    print(f"  → {len(items)}건")
 
-    if cat.get("복지·생활") or cat.get("전체"):
-        print("  [복지로] 수집 중...")
-        items = fetch_welfare(per_page=100)
-        raw.extend([normalize_welfare(i) for i in items])
-        print(f"  → {len(items)}건")
+    print("  [K-스타트업] 창업지원사업 수집 중...")
+    items = fetch_kstartup(per_page=100)
+    raw.extend([normalize_kstartup(i) for i in items if i])
+    print(f"  → {len(items)}건")
 
-    if cat.get("청년·취업") or cat.get("전체"):
-        print("  [고용24] 수집 중...")
-        items = fetch_youth_jobs(per_page=100)
-        raw.extend([normalize_youth(i) for i in items])
-        print(f"  → {len(items)}건")
+    print("  [소진공] 소상공인 전용 수집 중...")
+    items = fetch_soss(per_page=100)
+    raw.extend([normalize_soss(i) for i in items if i])
+    print(f"  → {len(items)}건")
+
+    print("  [복지로] 복지·생활 수집 중...")
+    items = fetch_welfare(per_page=100)
+    raw.extend([normalize_welfare(i) for i in items if i])
+    print(f"  → {len(items)}건")
+
+    print("  [고용24] 청년·취업·중장년 수집 중...")
+    items = fetch_youth_jobs(per_page=100)
+    raw.extend([normalize_youth(i) for i in items if i])
+    print(f"  → {len(items)}건")
+
+    print("  [고용24] 추가 취업지원 수집 중...")
+    items2 = fetch_youth_jobs_additional(per_page=100)
+    raw.extend([normalize_youth(i) for i in items2 if i])
+    print(f"  → {len(items2)}건")
+
+    print("  [농림부] 농업·농촌 지원사업 수집 중...")
+    items = fetch_agriculture(per_page=100)
+    raw.extend([normalize_agriculture(i) for i in items if i])
+    print(f"  → {len(items)}건")
 
     # 필터
     filtered = [r for r in raw if passes_filter(r, cfg)]
