@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 
 # 한글 Windows 콘솔(cmd.exe)은 기본 인코딩이 cp949 라, 원본 HWP 에서 넘어온
@@ -65,9 +66,21 @@ def save_wrong_ids(ids):
         json.dump(sorted(ids), f, ensure_ascii=False, indent=2)
 
 
+_ROUND_RE = re.compile(r"(\d{4})\D*?(\d{1,2})월")
+
+
+def round_sort_key(round_str):
+    """'2025년 9월 기출문제' 같은 회차 문자열을 연/월 순서로 정렬하기 위한 키.
+    문자열 그대로 sorted() 하면 '11월'이 '9월'보다 앞에 오는 문제가 있어서 필요."""
+    m = _ROUND_RE.search(round_str)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    return (9999, 99)
+
+
 def show_catalog(questions):
     subjects = sorted({f"{q['subject']}{q['level']}" for q in questions})
-    rounds = sorted({q['round'] for q in questions})
+    rounds = sorted({q['round'] for q in questions}, key=round_sort_key)
     print("=== 과목/급수 ===")
     print(", ".join(subjects))
     print("\n=== 회차 ===")

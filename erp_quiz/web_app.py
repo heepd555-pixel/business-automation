@@ -22,7 +22,7 @@ import socket
 
 from flask import Flask, redirect, render_template, request, session, url_for
 
-from quiz import BASE_DIR, filter_questions, load_questions
+from quiz import BASE_DIR, filter_questions, load_questions, round_sort_key
 
 app = Flask(__name__)
 # 클라우드는 워커 프로세스가 여러 개 뜰 수 있어서, os.urandom() 으로 매번 새로
@@ -72,7 +72,7 @@ class _Args:
 def _catalog():
     subjects = sorted({q["subject"] for q in QUESTIONS})
     levels = sorted({q["level"] for q in QUESTIONS})
-    rounds = sorted({q["round"] for q in QUESTIONS})
+    rounds = sorted({q["round"] for q in QUESTIONS}, key=round_sort_key)
     return subjects, levels, rounds
 
 
