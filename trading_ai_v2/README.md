@@ -37,6 +37,7 @@ trading_ai_v2/
 │
 ├── main.py               ← 🚀 실행 진입점 (여기서 실행)
 ├── view_report.py         ← 📖 저장된 reports/*.json 리포트를 다시 표로 보여주는 뷰어
+├── export_report_pdf.py   ← 📄 저장된 리포트를 PDF 파일로 내보내기 (더블클릭으로 보기)
 ├── full_universe.py       ← 🌍 KIS 랭킹 API로 시가총액·거래대금 상위 유니버스 실시간 수집
 ├── value_screener.py      ← 🧮 국내 주식 점수 계산 (저평가/우량/성장 + 3가지 가중치 프로필)
 ├── value_screener_us.py   ← 🧮 미국 주식 점수 계산 (저평가/우량, 근사 ROE)
@@ -154,7 +155,12 @@ python main.py --show-all     # 필터 통과 종목 전부 출력
 python view_report.py          # 가장 최근 리포트를 다시 표로 보기 (API 호출 없음, 즉시 출력)
 python view_report.py --list   # 저장된 리포트 파일 목록 보기
 python view_report.py --file reports/screening_20260707_125957.json   # 특정 리포트 지정
+
+python export_report_pdf.py    # 가장 최근 리포트를 PDF로 저장 (같은 폴더에 .pdf 생성, 더블클릭으로 열람)
+python export_report_pdf.py --file reports/screening_20260707_125957.json --out reports/내리포트.pdf
 ```
+> `export_report_pdf.py` 는 한글 표시를 위해 Windows 기본 폰트(맑은 고딕)를 사용합니다.
+> Windows 가 아니면 파일 상단의 `KOREAN_FONT_REGULAR`/`KOREAN_FONT_BOLD` 경로를 직접 지정하세요.
 
 > ⏱️ 전체 유니버스 스캔은 종목 수가 많아 국내는 종목당 API 호출이 7회라 10~20분,
 > 미국은 종목당 1회라 1,000종목 기준 10~15분 정도 걸릴 수 있습니다.

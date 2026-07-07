@@ -7,3 +7,4 @@
 
 requests>=2.31.0        # HTTP 요청 (KIS Open API 호출)
 python-dotenv>=1.0.0    # .env 파일 로드 (API 키 관리)
+fpdf2>=2.8.0            # export_report_pdf.py -- 리포트를 PDF로 내보내기 (한글 폰트 내장)
