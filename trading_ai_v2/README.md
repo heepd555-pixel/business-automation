@@ -36,6 +36,7 @@ KIS 랭킹 API 로 시가총액/거래대금 상위 유니버스 실시간 수�
 trading_ai_v2/
 │
 ├── main.py               ← 🚀 실행 진입점 (여기서 실행)
+├── view_report.py         ← 📖 저장된 reports/*.json 리포트를 다시 표로 보여주는 뷰어
 ├── full_universe.py       ← 🌍 KIS 랭킹 API로 시가총액·거래대금 상위 유니버스 실시간 수집
 ├── value_screener.py      ← 🧮 국내 주식 점수 계산 (저평가/우량/성장 + 3가지 가중치 프로필)
 ├── value_screener_us.py   ← 🧮 미국 주식 점수 계산 (저평가/우량, 근사 ROE)
@@ -149,6 +150,10 @@ python main.py --market all   # 국내 + 미국 모두 스캔
 python main.py --quick        # 예전처럼 고정 66종목만 빠르게 스캔 (테스트용)
 python main.py --top 10       # 상위 10개만 출력
 python main.py --show-all     # 필터 통과 종목 전부 출력
+
+python view_report.py          # 가장 최근 리포트를 다시 표로 보기 (API 호출 없음, 즉시 출력)
+python view_report.py --list   # 저장된 리포트 파일 목록 보기
+python view_report.py --file reports/screening_20260707_125957.json   # 특정 리포트 지정
 ```
 
 > ⏱️ 전체 유니버스 스캔은 종목 수가 많아 국내는 종목당 API 호출이 7회라 10~20분,
