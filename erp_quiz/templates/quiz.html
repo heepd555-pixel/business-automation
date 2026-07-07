@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ idx }}/{{ total }} - ERP 퀴즈{% endblock %}
+{% block content %}
+  <div class="progress">{{ idx }} / {{ total }}</div>
+  <div class="card">
+    <span class="badge">{{ type_label }}</span>
+    <span class="badge">{{ q.subject }}{{ q.level }}</span>
+    <span class="badge">{{ q.round }}</span>
+
+    {% if q.unit %}
+      <p class="sub" style="margin-top:10px;">{{ q.unit }}{% if q.keyword %} · 키워드: {{ q.keyword }}{% endif %}</p>
+    {% endif %}
+
+    <div class="stem">{{ q.stem }}</div>
+
+    {% if not revealed %}
+      <form method="post" action="{{ url_for('answer') }}">
+        {% for num in ["1","2","3","4"] %}
+          <button type="submit" name="choice" value="{{ num }}" class="option">
+            <span class="num">{{ num }}</span>{{ q.options.get(num, "") }}
+          </button>
+        {% endfor %}
+      </form>
+    {% else %}
+      {% for num in ["1","2","3","4"] %}
+        <div class="option {% if num == q.answer %}correct{% elif num == selected %}wrong{% endif %}">
+          <span class="num">{{ num }}</span>{{ q.options.get(num, "") }}
+        </div>
+      {% endfor %}
+
+      {% if selected == q.answer %}
+        <div class="result-banner correct">✓ 정답입니다!</div>
+      {% else %}
+        <div class="result-banner wrong">✗ 틀렸습니다. 정답은 {{ q.answer }}번 입니다.</div>
+      {% endif %}
+
+      {% if q.explanation %}
+        <div class="explanation">{{ q.explanation }}</div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('next_question') }}">
+        <button type="submit">{{ "결과 보기" if is_last else "다음 문제" }}</button>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

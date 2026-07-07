@@ -13,11 +13,14 @@
 
 ```
 erp_quiz/
-├── extract.py       ← HWP 시험지를 questions.json 으로 변환 (pyhwp 사용)
-├── quiz.py          ← 실제로 문제를 풀어보는 CLI 퀴즈
-├── questions.json   ← 추출된 문제 은행 (커밋됨, extract.py 재실행 없이 바로 사용 가능)
-├── wrong_log.json   ← 오답노트 (자동 생성/갱신, 커밋 안 됨)
-└── erp_source/      ← 원본 HWP/DOCX 시험 자료 (커밋 안 됨, 저작권 있는 원본이라 제외)
+├── extract.py        ← HWP 시험지를 questions.json 으로 변환 (pyhwp 사용)
+├── quiz.py           ← 실제로 문제를 풀어보는 CLI 퀴즈
+├── web_app.py        ← 휴대폰 브라우저로 풀 수 있는 웹앱 버전 (Flask)
+├── templates/        ← web_app.py 가 쓰는 화면 (base/setup/quiz/summary.html)
+├── quiz_exe_빌드.bat  ← 파이썬 없는 컴퓨터에서도 돌아가는 .exe 빌드 스크립트
+├── questions.json    ← 추출된 문제 은행 (커밋됨, extract.py 재실행 없이 바로 사용 가능)
+├── wrong_log.json    ← 오답노트 (자동 생성/갱신, 커밋 안 됨)
+└── erp_source/       ← 원본 HWP/DOCX 시험 자료 (커밋 안 됨, 저작권 있는 원본이라 제외)
 ```
 
 ## 사용법
@@ -50,6 +53,19 @@ quiz_exe_빌드.bat
 **이 둘은 항상 같은 폴더에 있어야 합니다** (exe 가 옆에서 questions.json 을 찾습니다).
 이 두 파일만 복사해서 옮기면 파이썬이 설치되지 않은 다른 Windows 컴퓨터에서도
 더블클릭으로 바로 실행됩니다. (오답노트 `wrong_log.json` 도 exe 옆에 자동 생성됩니다.)
+
+### 4. 휴대폰 브라우저로 풀기 (웹앱)
+```bash
+pip install flask
+python web_app.py
+```
+실행하면 콘솔에 두 개의 주소가 뜹니다:
+- `http://127.0.0.1:5000` -- 이 컴퓨터에서 확인용
+- `http://192.168.x.x:5000` -- **같은 와이파이에 연결된 휴대폰**에서 이 주소를 브라우저에 입력
+
+휴대폰에서 접속한 뒤 브라우저 메뉴에서 **"홈 화면에 추가"**를 하면 아이콘이 생겨서
+앱처럼 쓸 수 있습니다 (실제 설치형 앱은 아니고, 컴퓨터가 켜져 있고 `web_app.py`가
+실행 중일 때만 접속됩니다 -- 외부 인터넷에는 공개되지 않고 같은 공유기 안에서만 동작).
 
 ## 문제 데이터의 한계
 

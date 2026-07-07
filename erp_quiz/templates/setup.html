@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}ERP 퀴즈 시작{% endblock %}
+{% block content %}
+  <h1>📘 ERP 기출문제 퀴즈</h1>
+  <p class="sub">과목/급수/유형/회차를 고르고 시작하세요.</p>
+
+  <form method="post" action="{{ url_for('start') }}" class="card">
+    <label>과목</label>
+    <select name="subject">
+      <option value="">전체</option>
+      {% for s in subjects %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+
+    <label>급수</label>
+    <select name="level">
+      <option value="">전체</option>
+      {% for l in levels %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+    </select>
+
+    <label>유형</label>
+    <select name="type">
+      <option value="">전체</option>
+      <option value="theory">이론</option>
+      <option value="practical">실무(더존)</option>
+    </select>
+
+    <label>회차</label>
+    <select name="round">
+      <option value="">전체</option>
+      {% for r in rounds %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+
+    <label>문제 수</label>
+    <input type="number" name="count" value="20" min="1" max="100">
+
+    <div class="checkbox-row">
+      <input type="checkbox" name="review" id="review">
+      <label for="review" style="margin:0;">오답노트만 풀기 (현재 {{ wrong_count }}개)</label>
+    </div>
+
+    <button type="submit">시작하기</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}결과 - ERP 퀴즈{% endblock %}
+{% block content %}
+  <h1>결과</h1>
+  <div class="card">
+    <div class="score-big">{{ score }} / {{ attempted }}</div>
+    <p class="sub" style="text-align:center;">정답률 {{ pct }}%</p>
+  </div>
+
+  {% if wrong_qs %}
+    <div class="card">
+      <p class="sub" style="margin-top:0;">틀린 문제 ({{ wrong_qs|length }}개) -- 오답노트에 저장됨</p>
+      {% for q in wrong_qs %}
+        <div class="wrong-item">
+          <span class="badge">{{ q.subject }}{{ q.level }}</span>{{ q.stem[:60] }}...
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <a class="btn" href="{{ url_for('setup') }}">다시 시작</a>
+{% endblock %}
