@@ -25357,7 +25357,7 @@
       "3": "[ 81-1001000. BODY- 알미늄( GRAY-WHITE) ]",
       "4": "[ 83-2000110. 전장품 ASS'Y (TYPE A) ]"
     },
-    "answer": "2",
+    "answer": null,
     "explanation": "① [ 81-1001000. BODY- 알미늄( GRAY-WHITE) ] 주문적용 ② [ 88-1001020. PRESS FRAME-W (TYPE B) ] 청구적용 ③ [ 81-1001000. BODY- 알미늄( GRAY-WHITE) ] 생산계획적용 ④ [ 83-2000110. 전장품 ASS'Y (TYPE A) ] 직접입력",
     "type": "practical",
     "round": "2025년 9월 기출문제",
