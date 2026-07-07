@@ -1,0 +1,5 @@
+# 실행 시 자동 생성되는 파일 -- 소스코드 아님, 커밋 불필요
+token_cache.json
+reports/
+__pycache__/
+*.pyc

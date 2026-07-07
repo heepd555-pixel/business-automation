@@ -1,0 +1,9 @@
+# trading_ai_v2 -- 저평가 우량주 스크리너 (참고용, 매매 없음)
+#
+# [ 삭제된 의존성과 이유 ]
+#   psycopg2-binary, websocket-client, APScheduler, torch, flask, yfinance,
+#   pykrx, pytz -- 전부 실시간 매매/DB/스케줄러/RL/대시보드/미국시장용이었고,
+#   이번 버전은 "KIS API 로 재무제표 조회 후 점수 계산"만 하므로 불필요.
+
+requests>=2.31.0        # HTTP 요청 (KIS Open API 호출)
+python-dotenv>=1.0.0    # .env 파일 로드 (API 키 관리)
