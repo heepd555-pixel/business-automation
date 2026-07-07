@@ -6,3 +6,8 @@ wrong_log.json
 
 __pycache__/
 *.pyc
+
+# PyInstaller 빌드 산출물 (quiz_exe_빌드.bat 실행 시 생성, 용량 크고 재생성 가능)
+build/
+dist/
+*.spec

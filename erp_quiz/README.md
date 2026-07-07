@@ -42,6 +42,15 @@ python extract.py                # erp_source/ 전체를 다시 읽어서 questi
 python extract.py --limit 3      # 파일 3개만 처리 (테스트용, 빠름)
 ```
 
+### 3. 파이썬 없는 컴퓨터에서도 실행할 .exe 만들기
+```bash
+quiz_exe_빌드.bat
+```
+`dist\ERP기출문제퀴즈.exe` 와 `dist\questions.json` 두 파일이 생성됩니다.
+**이 둘은 항상 같은 폴더에 있어야 합니다** (exe 가 옆에서 questions.json 을 찾습니다).
+이 두 파일만 복사해서 옮기면 파이썬이 설치되지 않은 다른 Windows 컴퓨터에서도
+더블클릭으로 바로 실행됩니다. (오답노트 `wrong_log.json` 도 exe 옆에 자동 생성됩니다.)
+
 ## 문제 데이터의 한계
 
 - 이론문제 중 일부(초반 사례형/개념형 문제 236개)는 원본 학습자료 자체에 정답이

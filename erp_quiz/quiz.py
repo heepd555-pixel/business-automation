@@ -20,8 +20,24 @@ import argparse
 import json
 import os
 import random
+import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 한글 Windows 콘솔(cmd.exe)은 기본 인코딩이 cp949 라, 원본 HWP 에서 넘어온
+# 특수기호(예: 사설 영역 유니코드 글머리 기호) 를 만나면 print() 가 그대로 죽습니다.
+# UTF-8로 강제 전환하고, 그래도 표현 안 되는 문자는 깨진 채로라도 계속 진행하도록
+# errors="replace" 를 씁니다 (프로그램이 죽는 것보다 글자 하나 깨지는 게 낫습니다).
+for _stream in (sys.stdout, sys.stdin, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
+# PyInstaller(--onefile)로 exe 를 만들면 __file__ 은 임시 압축해제 폴더를 가리켜서
+# questions.json/wrong_log.json 을 exe 옆이 아니라 엉뚱한 곳에서 찾게 됩니다.
+# sys.frozen 이면 exe 파일 자체가 있는 폴더를, 아니면 이 스크립트 파일의 폴더를 씁니다.
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 QUESTIONS_FILE = os.path.join(BASE_DIR, "questions.json")
 WRONG_LOG_FILE = os.path.join(BASE_DIR, "wrong_log.json")
 
@@ -123,7 +139,8 @@ def run_quiz(pool, count):
         # 이번에 맞힌 문제는 오답노트에서 제거
         existing.difference_update(q["id"] for q in picked if q not in wrong)
         save_wrong_ids(existing)
-        print(f"\n오답노트에 저장했습니다 ({WRONG_LOG_FILE}). 다음에 'python quiz.py --review' 로 다시 풀어보세요.")
+        cmd_hint = f'"{os.path.basename(sys.executable)}"' if getattr(sys, "frozen", False) else "python quiz.py"
+        print(f"\n오답노트에 저장했습니다 ({WRONG_LOG_FILE}). 다음에 '{cmd_hint} --review' 로 다시 풀어보세요.")
     elif attempted:
         # 이번에 다 맞혔으면 오답노트에서도 제거
         existing = load_wrong_ids()
