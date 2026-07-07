@@ -3,6 +3,7 @@ erp_source/
 
 # 개인 학습 기록 (실행할 때마다 바뀌는 상태)
 wrong_log.json
+wrong_log_web.json
 
 __pycache__/
 *.pyc
