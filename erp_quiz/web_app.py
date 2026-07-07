@@ -165,6 +165,8 @@ def answer():
         return redirect(url_for("setup"))
 
     q = _question_by_id(ids[idx])
+    if q["type"] == "practical":
+        return redirect(url_for("quiz"))
     selected = request.form.get("choice")
     session["selected"] = selected
     session["revealed"] = True
@@ -190,6 +192,7 @@ def summary():
     wrong_ids = session.get("wrong_ids", [])
     attempted = score + len(wrong_ids)
     wrong_qs = [_question_by_id(i) for i in wrong_ids]
+    practical_count = sum(1 for i in ids if (q := _question_by_id(i)) and q["type"] == "practical")
 
     if attempted:
         existing = _get_review_ids()
@@ -199,7 +202,10 @@ def summary():
         _set_review_ids(existing)
 
     pct = round(score / attempted * 100) if attempted else 0
-    return render_template("summary.html", score=score, attempted=attempted, pct=pct, wrong_qs=wrong_qs)
+    return render_template(
+        "summary.html", score=score, attempted=attempted, pct=pct,
+        wrong_qs=wrong_qs, practical_count=practical_count,
+    )
 
 
 if __name__ == "__main__":
