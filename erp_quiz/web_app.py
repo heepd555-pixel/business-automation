@@ -15,49 +15,47 @@ quiz.py 의 문제 로딩/필터링/오답노트 로직을 그대로 재사용�
 [ 참고 ]
 이 서버는 같은 와이파이 안에서만 접속 가능합니다 (외부 인터넷에 공개되지 않음).
 """
-import json
 import os
 import random
 import socket
+from datetime import timedelta
 
 from flask import Flask, redirect, render_template, request, session, url_for
 
-from quiz import BASE_DIR, filter_questions, load_questions, round_sort_key
+from quiz import filter_questions, load_questions, round_sort_key
 
 app = Flask(__name__)
 # 클라우드는 워커 프로세스가 여러 개 뜰 수 있어서, os.urandom() 으로 매번 새로
 # 만들면 요청이 다른 워커로 갈 때마다 세션이 깨진다. 배포 시 SECRET_KEY 환경변수를
 # 넣어주면 그걸 쓰고, 로컬 개인용 실행일 때만 임시 키를 씀.
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
+# 오답노트를 세션 쿠키(휴대폰 브라우저)에 저장하므로, 서버가 재시작/재배포돼도
+# 사라지지 않게 유지 기간을 길게 둠 (기본은 브라우저 닫으면 만료).
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 
 QUESTIONS = load_questions()
 TYPE_LABEL = {"theory": "이론", "practical": "실무(더존)"}
 
-# 여러 명이 같이 쓰므로 오답노트는 이름별로 나눠서 저장 (wrong_log.json 은
-# quiz.py CLI 전용 단일 사용자 파일이라 그대로 두고, 웹은 별도 파일 사용)
-WRONG_LOG_WEB_FILE = os.path.join(BASE_DIR, "wrong_log_web.json")
+# 오답노트를 문제 id(긴 문자열) 그대로 쿠키에 쌓으면 금방 브라우저 쿠키 용량
+# 한도(약 4KB)를 넘어서 조용히 통째로 날아갈 수 있다. QUESTIONS 안에서의
+# 정수 인덱스로 바꿔서 저장하면 훨씬 압축되어 안전하다.
+_ID_TO_INDEX = {q["id"]: i for i, q in enumerate(QUESTIONS)}
 
 
-def _load_all_wrong():
-    if not os.path.exists(WRONG_LOG_WEB_FILE):
-        return {}
-    with open(WRONG_LOG_WEB_FILE, encoding="utf-8") as f:
-        return json.load(f)
+def _get_review_ids():
+    """세션 쿠키에 저장된 오답노트(정수 인덱스)를 문제 id 집합으로 변환."""
+    idxs = session.get("wrong_review", [])
+    ids = set()
+    for i in idxs:
+        if 0 <= i < len(QUESTIONS):
+            ids.add(QUESTIONS[i]["id"])
+    return ids
 
 
-def _save_all_wrong(data):
-    with open(WRONG_LOG_WEB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def _load_wrong_ids(name):
-    return set(_load_all_wrong().get(name, []))
-
-
-def _save_wrong_ids(name, ids):
-    data = _load_all_wrong()
-    data[name] = sorted(ids)
-    _save_all_wrong(data)
+def _set_review_ids(ids):
+    idxs = sorted(_ID_TO_INDEX[i] for i in ids if i in _ID_TO_INDEX)
+    session["wrong_review"] = idxs
+    session.permanent = True
 
 
 class _Args:
@@ -92,7 +90,7 @@ def _local_ip():
 def setup():
     subjects, levels, rounds = _catalog()
     name = session.get("name", "")
-    wrong_count = len(_load_wrong_ids(name)) if name else 0
+    wrong_count = len(_get_review_ids())
     return render_template(
         "setup.html", subjects=subjects, levels=levels, rounds=rounds,
         wrong_count=wrong_count, name=name,
@@ -105,12 +103,13 @@ def start():
     if not name:
         return redirect(url_for("setup"))
     session["name"] = name
+    session.permanent = True
 
     review = request.form.get("review") == "on"
     count = int(request.form.get("count") or 20)
 
     if review:
-        wrong_ids = _load_wrong_ids(name)
+        wrong_ids = _get_review_ids()
         pool = [q for q in QUESTIONS if q["id"] in wrong_ids and q.get("answer")]
     else:
         args = _Args(
@@ -186,19 +185,18 @@ def next_question():
 
 @app.route("/summary")
 def summary():
-    name = session.get("name", "")
     ids = session.get("ids") or []
     score = session.get("score", 0)
     wrong_ids = session.get("wrong_ids", [])
     attempted = score + len(wrong_ids)
     wrong_qs = [_question_by_id(i) for i in wrong_ids]
 
-    if attempted and name:
-        existing = _load_wrong_ids(name)
+    if attempted:
+        existing = _get_review_ids()
         existing.update(wrong_ids)
         correct_ids = [i for i in ids[:attempted] if i not in wrong_ids]
         existing.difference_update(correct_ids)
-        _save_wrong_ids(name, existing)
+        _set_review_ids(existing)
 
     pct = round(score / attempted * 100) if attempted else 0
     return render_template("summary.html", score=score, attempted=attempted, pct=pct, wrong_qs=wrong_qs)
