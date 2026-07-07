@@ -1,0 +1,8 @@
+# 원본 HWP/DOCX 시험 자료 (저작권 있는 대용량 원본 -- 커밋 불필요, questions.json 이 추출본)
+erp_source/
+
+# 개인 학습 기록 (실행할 때마다 바뀌는 상태)
+wrong_log.json
+
+__pycache__/
+*.pyc
