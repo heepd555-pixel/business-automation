@@ -146,6 +146,7 @@ SYMBOLS = LARGE_CAP_SYMBOLS + LOW_PRICE_SYMBOLS + SECTOR_SYMBOLS
 # 아래 숫자만 바꾸면 "얼마나 엄격하게 걸러낼지" 바로 조정됩니다.
 
 class SCREENER:
+    PER_MIN             = 1.0    # PER 이 이 값 미만이면 제외 -- 정상적인 회사는 거의 없음(데이터 이상치/부실주 신호)
     PER_MAX             = 15.0   # PER 이 이 값 이하 -- 이익 대비 저평가
     PBR_MAX             = 1.5    # PBR 이 이 값 이하 -- 자산 대비 저평가
     ROE_MIN             = 8.0    # ROE(자기자본이익률) 가 이 값 이상 -- 돈 잘 버는 회사
@@ -153,4 +154,34 @@ class SCREENER:
     MIN_REVENUE_GROWTH  = 0.0    # 매출액 증가율이 이 값 이상 -- 최소한 역성장은 아님
     REQUIRE_POSITIVE_NET_INCOME = True  # 당기순이익 흑자 여부를 반드시 확인
 
+    # 미국 전용 -- 페니스톡(초저가주) 제외 기준. 미국 증권가에서 통상 $5 미만을
+    # "페니스톡"으로 분류하며, 이 구간은 데이터 이상치/투기성 종목이 많아 제외.
+    US_MIN_PRICE = 5.0
+
+    # "성장주 TOP N" 전용 기준 (저평가 우량주 필터와는 별개 -- value_screener.select_growth_picks)
+    # 전분기 대비 매출액 증가율이 이 값 이상이면 "성장 우수" 종목으로 별도 표에 노출
+    GROWTH_MIN = 15.0
+
     TOP_N = 20   # main.py 실행 시 상위 몇 개 종목을 보여줄지
+
+
+# ── 스코어링 가중치 프로필 (value_screener.py 가 사용) ────────────────────────
+#
+# [ 초보자 설명 ]
+# 하드 필터(위 SCREENER 클래스)를 통과한 "저평가 우량주 후보"들 안에서,
+# "그 중 어떤 종목을 더 위로 올릴지"는 투자 스타일에 따라 다릅니다.
+# 하나로 정하는 대신, 같은 스캔 데이터로 세 가지 스타일 순위를 동시에 보여줍니다.
+# (각 항목의 합은 1.0 이어야 함)
+#
+#   deep_value(딥밸류) : "일단 싸야 한다" -- 저평가 비중을 가장 크게
+#   balanced(밸런스)   : 저평가·우량을 동률로, 성장은 보조 지표로만
+#   garp(GARP)         : "적정 가격의 성장주" -- 성장 비중을 가장 크게
+WEIGHT_PROFILES = {
+    "deep_value": {"value": 0.50, "quality": 0.35, "growth": 0.10, "analyst": 0.05},
+    "balanced":   {"value": 0.35, "quality": 0.35, "growth": 0.20, "analyst": 0.10},
+    "garp":       {"value": 0.25, "quality": 0.25, "growth": 0.40, "analyst": 0.10},
+}
+
+# main.py 가 기본으로 어떤 프로필의 점수를 "성장주 TOP" 이 아닌 하드필터
+# 자체(적자 제외 등)에는 영향을 주지 않고, 오직 순위 정렬 기준으로만 씀
+DEFAULT_WEIGHT_PROFILE = "balanced"

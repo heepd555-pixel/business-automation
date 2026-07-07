@@ -17,8 +17,12 @@ KIS의 "시가총액 상위" 랭킹 API(FHPST01740000)는 한 번 호출에 최�
  응답이 깨져서 동작하지 않아, 안정적으로 동작하는 KIS API 랭킹 방식을 택했습니다.)
 
 [ 해외(미국 등) ]
-KIS의 "해외주식 시가총액순위" API(HHDFS76350100)는 한 번에 최대 100건을 주므로
-가격대 분할 없이 거래소(나스닥/뉴욕/아멕스)별 상위 100개씩만 가져옵니다.
+처음엔 "해외주식 시가총액순위"(HHDFS76350100, 최대 100건)만 거래소별로 가져왔는데,
+이 API는 가격대 분할이 안 돼서 거래소당 100개가 한계였습니다.
+대신 "해외주식 거래대금순위"(HHDFS76320010)는 국내 랭킹 API처럼 PRC1/PRC2 가격대
+필터를 지원해서, 가격대를 나눠 여러 번 호출하면 거래소당 100개보다 훨씬 많은
+종목을 모을 수 있습니다. 그래서 시가총액순위(기준 100개) + 거래대금순위(가격대
+분할, 활발히 거래되는 종목 위주)를 합쳐서 유니버스를 구성합니다.
 """
 import logging
 import time
@@ -50,6 +54,16 @@ US_EXCHANGES = {
     "아멕스": "AMS",
 }
 
+# 미국 가격대 구간 (USD) -- 거래대금순위 API 의 100건 제한을 넘어서기 위한 분할 기준
+US_PRICE_BANDS = [
+    ("", "10"),
+    ("10", "30"),
+    ("30", "75"),
+    ("75", "150"),
+    ("150", "400"),
+    ("400", ""),
+]
+
 
 def fetch_kr_universe(api, price_bands: list = None, on_progress=None) -> list:
     """
@@ -76,23 +90,37 @@ def fetch_kr_universe(api, price_bands: list = None, on_progress=None) -> list:
     return universe
 
 
-def fetch_us_universe(api, exchanges: dict = None, on_progress=None) -> list:
+def fetch_us_universe(api, exchanges: dict = None, price_bands: list = None, on_progress=None) -> list:
     """
-    미국(나스닥/뉴욕/아멕스) 시가총액 상위 100개씩 조회 + 중복 제거.
+    미국(나스닥/뉴욕/아멕스) 유니버스 수집.
+    1) 시가총액순위 상위 100개씩 (거래소당) -- market_cap 필드 포함, 정렬 기준으로 씀
+    2) 거래대금순위를 가격대별로 나눠서 추가 수집 -- 1) 에서 못 잡은 활발히 거래되는
+       중소형주까지 포함 (market_cap 필드는 없어서 0 처리, 정렬에서는 뒤로 밀림)
 
-    Returns: [{"code","name","market_cap","excd"}, ...] 시가총액 내림차순
+    Returns: [{"code","name","market_cap","excd"}, ...] 시가총액 내림차순 (거래대금 전용 항목은 뒤쪽)
     """
-    excs = exchanges or US_EXCHANGES
-    seen = {}
+    excs  = exchanges or US_EXCHANGES
+    bands = price_bands or US_PRICE_BANDS
+    seen  = {}   # code -> row (중복 제거, 먼저 본 것 유지)
 
-    for i, (ename, ecode) in enumerate(excs.items(), start=1):
+    calls = [("cap", ename, ecode, "", "") for ename, ecode in excs.items()]
+    calls += [("val", ename, ecode, p1, p2) for ename, ecode in excs.items() for p1, p2 in bands]
+
+    for i, (kind, ename, ecode, p1, p2) in enumerate(calls, start=1):
         if on_progress:
-            on_progress(i, len(excs), ename)
-        rows = api.get_overseas_market_cap_ranking(ecode)
+            label = f"{ename} 시가총액상위" if kind == "cap" else f"{ename} 거래대금 ${p1 or '0'}~${p2 or '무제한'}"
+            on_progress(i, len(calls), label)
+
+        if kind == "cap":
+            rows = api.get_overseas_market_cap_ranking(ecode)
+        else:
+            rows = api.get_overseas_trade_value_ranking(ecode, price_min=p1, price_max=p2)
+
         for row in rows:
             code = row["code"]
             if code and code not in seen:
-                row["excd"] = ecode
+                row["excd"]       = ecode
+                row.setdefault("market_cap", 0.0)
                 seen[code] = row
         time.sleep(0.15)
 

@@ -475,6 +475,49 @@ class KIS:
             logger.warning(f"[KIS] 해외 시가총액 순위 조회 실패 ({excd}): {e}")
             return []
 
+    def get_overseas_trade_value_ranking(self, excd: str, price_min: str = "", price_max: str = "",
+                                          vol_rang: str = "0") -> list:
+        """
+        해외주식 거래대금순위 조회 (HHDFS76320010) -- 최대 100건, 가격대 필터 지원.
+        URL: /uapi/overseas-stock/v1/ranking/trade-pbmn
+
+        시가총액순위(get_overseas_market_cap_ranking)와 달리 이 API는 PRC1/PRC2 로
+        가격대를 나눠 여러 번 호출할 수 있어서, full_universe.py 가 이 방식으로
+        거래소당 100개보다 훨씬 많은 종목을 모을 수 있습니다.
+        (거래대금 기준이라 실제로 활발히 거래되는 종목 위주로 잡힘)
+
+        excd: "NAS"=나스닥, "NYS"=뉴욕, "AMS"=아멕스
+        price_min/price_max: 가격대 필터 (문자열, 빈 값이면 무제한)
+
+        Returns: [{"code","name","price","trade_value"}, ...] 거래대금 내림차순 (최대 100개)
+        """
+        try:
+            url = BASE_URL + "/uapi/overseas-stock/v1/ranking/trade-pbmn"
+            params = {
+                "KEYB":     "",
+                "AUTH":     "",
+                "EXCD":     excd,
+                "NDAY":     "0",     # 0 = 당일 기준
+                "VOL_RANG": vol_rang,
+                "PRC1":     price_min,
+                "PRC2":     price_max,
+                "CURR_GB":  "0",     # market-cap 랭킹과 동일하게 실제로는 필수 (문서 누락)
+            }
+            out = requests.get(url, headers=self.headers("HHDFS76320010"),
+                               params=params, timeout=10).json().get("output2", [])
+            return [
+                {
+                    "code":        row.get("symb", ""),
+                    "name":        row.get("name", ""),
+                    "price":       float(row.get("last", 0) or 0),
+                    "trade_value": float(row.get("tamt", 0) or 0),
+                }
+                for row in out
+            ]
+        except Exception as e:
+            logger.warning(f"[KIS] 해외 거래대금 순위 조회 실패 ({excd}, {price_min}~{price_max}): {e}")
+            return []
+
     def get_overseas_price_detail(self, excd: str, symbol: str) -> dict:
         """
         해외주식 현재가상세 조회 (HHDFS76200200).
