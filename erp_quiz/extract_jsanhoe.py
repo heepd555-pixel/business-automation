@@ -32,7 +32,7 @@ ROUND_RE = re.compile(r"(\d+)회")
 QSTART_RE = re.compile(r"\n(\d+)\.\s*")
 HEADER_FOOTER_RE = re.compile(r"\[제\d+회[^\]]*\]\n")
 PAGE_FOOTER_RE = re.compile(r"\d+/\d+\(뒷면 계속\)\n?")
-ANSWER_TABLE_RE = re.compile(r"A\s*형\s*\n?((?:<\d+>\s*\n?)+)((?:[①②③④]\s*\n?){1,20})")
+ANSWER_TABLE_RE = re.compile(r"A\s*형\s*\n?((?:<\d+>\s*\n?)+)((?:[①②③④1-4]\s*\n?){1,20})")
 
 
 def _fix_mojibake(name):
@@ -106,6 +106,31 @@ def extract_answers_pdf(answer_pdf_path):
     doc = fitz.open(answer_pdf_path)
     text = doc[0].get_text()
     return _parse_answer_table(text)
+
+
+def extract_explanations_pdf(answer_pdf_path):
+    """확정답안 PDF는 표(정답 요약) 뒤에 문제별 [답] X 해설... 이 이어진다."""
+    doc = fitz.open(answer_pdf_path)
+    full_text = "".join(p.get_text() for p in doc)
+    full_text = HEADER_FOOTER_RE.sub("", full_text)
+    full_text = PAGE_FOOTER_RE.sub("", full_text)
+
+    start_m = re.search(
+        r"B\s*형\s*\n?(?:<\d+>\s*\n?)+(?:[①②③④1-4]\s*\n?)+", full_text,
+    )
+    if not start_m:
+        return {}
+    detail_text = full_text[start_m.end():]
+
+    parts = QSTART_RE.split("\n" + detail_text)
+    results = {}
+    for i in range(1, len(parts), 2):
+        num = int(parts[i])
+        body = parts[i + 1] if i + 1 < len(parts) else ""
+        m = re.search(r"\[\s*답\s*\]\s*[①②③④]\s*", body)
+        if m:
+            results[num] = body[m.end():].strip()
+    return results
 
 
 # ---------- HWP 경로 (오래된 회차) ----------
@@ -208,8 +233,9 @@ def _parse_answer_table(text):
     if not m:
         return {}
     nums = re.findall(r"<(\d+)>", m.group(1))
-    circles = re.findall(r"[①②③④]", m.group(2))
-    return {int(n): CIRCLE_TO_NUM[c] for n, c in zip(nums, circles)}
+    marks = re.findall(r"[①②③④1-4]", m.group(2))
+    answers = [CIRCLE_TO_NUM.get(c, c) for c in marks]  # 원문자 또는 이미 숫자인 경우 둘 다 처리
+    return {int(n): a for n, a in zip(nums, answers)}
 
 
 def process_round(round_zip_path):
@@ -230,6 +256,7 @@ def process_round(round_zip_path):
                 return []
             questions = parse_questions_pdf(extract_theory_text_pdf(a_form))
             answers = extract_answers_pdf(answer_file)
+            explanations = extract_explanations_pdf(answer_file)
         else:
             a_form, answer_file = find_pair(round_zip_path, tmp, "A형", "답안", "hwp")
             if not a_form or not answer_file:
@@ -237,6 +264,7 @@ def process_round(round_zip_path):
                 return []
             questions = parse_questions_hwp(hwp_to_soup(a_form, tmp))
             answers = extract_answers_hwp(hwp_to_soup(answer_file, tmp))
+            explanations = {}  # 오래된 HWP 답안은 표/날짜와 뒤섞여서 해설 추출 안 함
 
         results = []
         for num, q in questions.items():
@@ -251,7 +279,7 @@ def process_round(round_zip_path):
                 "stem": q["stem"],
                 "options": q["options"],
                 "answer": answers.get(num),
-                "explanation": "",
+                "explanation": explanations.get(num, ""),
             })
         return results
 
