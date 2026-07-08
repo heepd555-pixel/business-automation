@@ -259,8 +259,14 @@ def _parse_answer_table(text):
 
 
 def process_round(round_zip_path):
-    round_m = ROUND_RE.search(os.path.basename(round_zip_path))
-    round_label = f"{round_m.group(1)}회" if round_m else os.path.basename(round_zip_path)
+    base = os.path.basename(round_zip_path)
+    round_m = ROUND_RE.search(base)
+    if round_m:
+        round_label = f"{round_m.group(1)}회"
+    else:
+        # "특별회", "특별회2" 처럼 숫자 없는 회차명 (예: 코로나19 시기 보충시험)
+        special_m = re.search(r"(특별회\d*)", base)
+        round_label = special_m.group(1) if special_m else base
 
     with tempfile.TemporaryDirectory() as tmp:
         with zipfile.ZipFile(round_zip_path) as zf:
