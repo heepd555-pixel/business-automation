@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}채점 결과 - 시험모드{% endblock %}
+{% block content %}
+  <h1>채점 결과</h1>
+  <div class="card">
+    <div class="score-big">{{ score }} / {{ total }}</div>
+    <p class="sub" style="text-align:center;">정답률 {{ pct }}%</p>
+  </div>
+
+  {% for row in rows %}
+    {% set q = row.q %}
+    <div class="card">
+      <span class="badge">{{ loop.index }}번</span>
+      <span class="badge">{{ q.subject }}{{ q.level }}</span>
+
+      <span class="q-label" style="margin-top:10px;">문제</span>
+      <div class="stem">{{ q.stem }}</div>
+
+      {% if q.image %}
+        <img class="q-image" src="{{ url_for('static', filename=q.image) }}" alt="문제 첨부 이미지">
+      {% endif %}
+
+      <span class="choices-label">보기</span>
+      <div class="choices">
+      {% for num in ["1","2","3","4"] %}
+        <div class="option {% if num == q.answer %}correct{% elif num == row.selected %}wrong{% endif %}">
+          <span class="num">{{ num }}</span>{{ q.options.get(num, "") }}
+        </div>
+      {% endfor %}
+      </div>
+
+      {% if row.correct %}
+        <div class="result-banner correct">✓ 정답입니다!</div>
+      {% elif row.selected %}
+        <div class="result-banner wrong">✗ {{ row.selected }}번 선택 -- 정답은 {{ q.answer }}번 입니다.</div>
+      {% else %}
+        <div class="result-banner wrong">✗ 답을 선택하지 않음 -- 정답은 {{ q.answer }}번 입니다.</div>
+      {% endif %}
+
+      {% if q.explanation %}
+        <div class="explanation">{{ q.explanation }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <a class="btn" href="{{ url_for('exam_setup') }}">다른 회차 시험보기</a>
+  <a class="btn btn-secondary" href="{{ url_for('setup') }}">일반 연습으로</a>
+{% endblock %}

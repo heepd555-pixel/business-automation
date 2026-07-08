@@ -70,7 +70,7 @@ class _Args:
 def _catalog():
     subjects = sorted({q["subject"] for q in QUESTIONS})
     levels = sorted({q["level"] for q in QUESTIONS})
-    rounds = sorted({q["round"] for q in QUESTIONS}, key=round_sort_key)
+    rounds = sorted({q["round"] for q in QUESTIONS}, key=round_sort_key, reverse=True)
     return subjects, levels, rounds
 
 
@@ -95,6 +95,118 @@ def setup():
         "setup.html", subjects=subjects, levels=levels, rounds=rounds,
         wrong_count=wrong_count, name=name,
     )
+
+
+@app.route("/exam")
+def exam_setup():
+    """시험모드: 회차+과목+급수를 하나 골라서 그 이론 문제 전체를 실제 시험처럼
+    풀고(문제마다 정답 공개 없음), 끝까지 다 풀면 한번에 채점+해설을 보여준다."""
+    combos = sorted(
+        {(q["round"], q["subject"], q["level"]) for q in QUESTIONS if q["type"] == "theory" and q.get("answer")},
+        key=lambda c: (round_sort_key(c[0]), c[1], c[2]),
+        reverse=True,
+    )
+    counts = {}
+    for q in QUESTIONS:
+        if q["type"] != "theory" or not q.get("answer"):
+            continue
+        key = (q["round"], q["subject"], q["level"])
+        counts[key] = counts.get(key, 0) + 1
+    exams = [
+        {"round": r, "subject": s, "level": l, "value": f"{r}|{s}|{l}", "count": counts[(r, s, l)]}
+        for (r, s, l) in combos
+    ]
+    return render_template("exam_setup.html", exams=exams, name=session.get("name", ""))
+
+
+@app.route("/exam/start", methods=["POST"])
+def exam_start():
+    name = request.form.get("name", "").strip()
+    if not name:
+        return redirect(url_for("exam_setup"))
+    session["name"] = name
+    session.permanent = True
+
+    combo = request.form.get("combo", "")
+    parts = combo.split("|")
+    if len(parts) != 3:
+        return redirect(url_for("exam_setup"))
+    round_, subject, level = parts
+
+    pool = [
+        q for q in QUESTIONS
+        if q["round"] == round_ and q["subject"] == subject and q["level"] == level
+        and q["type"] == "theory" and q.get("answer")
+    ]
+    pool.sort(key=lambda q: q["num"])
+
+    session["exam_ids"] = [q["id"] for q in pool]
+    session["exam_idx"] = 0
+    session["exam_answers"] = {}
+    return redirect(url_for("exam_quiz"))
+
+
+@app.route("/exam/quiz")
+def exam_quiz():
+    ids = session.get("exam_ids")
+    if not ids:
+        return redirect(url_for("exam_setup"))
+
+    idx = session.get("exam_idx", 0)
+    if idx >= len(ids):
+        return redirect(url_for("exam_result"))
+
+    q = _question_by_id(ids[idx])
+    return render_template(
+        "exam_quiz.html", q=q, idx=idx + 1, total=len(ids),
+        is_last=(idx + 1 == len(ids)),
+    )
+
+
+@app.route("/exam/answer", methods=["POST"])
+def exam_answer():
+    ids = session.get("exam_ids")
+    idx = session.get("exam_idx", 0)
+    if not ids or idx >= len(ids):
+        return redirect(url_for("exam_setup"))
+
+    qid = ids[idx]
+    selected = request.form.get("choice")
+    answers = session.get("exam_answers", {})
+    answers[qid] = selected
+    session["exam_answers"] = answers
+    session["exam_idx"] = idx + 1
+    return redirect(url_for("exam_quiz"))
+
+
+@app.route("/exam/result")
+def exam_result():
+    ids = session.get("exam_ids") or []
+    answers = session.get("exam_answers", {})
+    if not ids:
+        return redirect(url_for("exam_setup"))
+
+    rows = []
+    score = 0
+    wrong_ids = []
+    for qid in ids:
+        q = _question_by_id(qid)
+        selected = answers.get(qid)
+        correct = selected == q["answer"]
+        if correct:
+            score += 1
+        else:
+            wrong_ids.append(qid)
+        rows.append({"q": q, "selected": selected, "correct": correct})
+
+    if ids:
+        existing = _get_review_ids()
+        existing.update(wrong_ids)
+        existing.difference_update(i for i in ids if i not in wrong_ids)
+        _set_review_ids(existing)
+
+    pct = round(score / len(ids) * 100) if ids else 0
+    return render_template("exam_result.html", rows=rows, score=score, total=len(ids), pct=pct)
 
 
 @app.route("/start", methods=["POST"])

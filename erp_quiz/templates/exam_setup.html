@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}시험모드 - ERP 퀴즈{% endblock %}
+{% block content %}
+  <h1>📝 시험모드</h1>
+  <p class="sub">회차 하나를 골라 이론 문제 전체를 실제 시험처럼 풀어봅니다. 정답은 문제마다 바로 안 보여주고, 다 풀고 제출하면 한번에 채점됩니다.</p>
+
+  <form method="post" action="{{ url_for('exam_start') }}" class="card">
+    <label>이름 (오답노트 구분용)</label>
+    <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
+
+    <label>기출문제 (이론)</label>
+    <select name="combo">
+      {% for e in exams %}
+        <option value="{{ e.value }}">{{ e.round }} - {{ e.subject }}{{ e.level }} ({{ e.count }}문제)</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">시험 시작</button>
+  </form>
+
+  <a class="btn btn-secondary" href="{{ url_for('setup') }}">← 일반 연습으로 돌아가기</a>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ idx }}/{{ total }} - 시험모드{% endblock %}
+{% block content %}
+  <div class="progress">시험모드 · {{ idx }} / {{ total }}</div>
+  <div class="card">
+    <span class="badge">{{ q.subject }}{{ q.level }}</span>
+    <span class="badge">{{ q.round }}</span>
+
+    {% if q.unit %}
+      <p class="sub" style="margin-top:10px;">{{ q.unit }}{% if q.keyword %} · 키워드: {{ q.keyword }}{% endif %}</p>
+    {% endif %}
+
+    <span class="q-label">문제</span>
+    <div class="stem">{{ q.stem }}</div>
+
+    {% if q.image %}
+      <img class="q-image" src="{{ url_for('static', filename=q.image) }}" alt="문제 첨부 이미지">
+    {% endif %}
+
+    <span class="choices-label">보기</span>
+    <form method="post" action="{{ url_for('exam_answer') }}" class="choices">
+      {% for num in ["1","2","3","4"] %}
+        <button type="submit" name="choice" value="{{ num }}" class="option">
+          <span class="num">{{ num }}</span>{{ q.options.get(num, "") }}
+        </button>
+      {% endfor %}
+    </form>
+  </div>
+{% endblock %}
