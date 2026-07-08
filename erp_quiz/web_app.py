@@ -120,7 +120,7 @@ def exam_setup():
 
     scopes = []
     for year in sorted(rounds_by_year, reverse=True):
-        scopes.append({"value": f"year:{year}", "label": f"{year}년 전체 (회차 합쳐서)", "is_year": True})
+        scopes.append({"value": f"year:{year}", "label": f"{year}년 전체", "is_year": True})
         for r in sorted(rounds_by_year[year], key=round_sort_key, reverse=True):
             scopes.append({"value": f"round:{r}", "label": f"　{r}", "is_year": False})
 
