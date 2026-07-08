@@ -34,7 +34,7 @@ app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 
 QUESTIONS = load_questions()
-TYPE_LABEL = {"theory": "이론", "practical": "실무(더존)"}
+TYPE_LABEL = {"theory": "이론"}
 
 # 오답노트를 문제 id(긴 문자열) 그대로 쿠키에 쌓으면 금방 브라우저 쿠키 용량
 # 한도(약 4KB)를 넘어서 조용히 통째로 날아갈 수 있다. QUESTIONS 안에서의
@@ -60,10 +60,9 @@ def _set_review_ids(ids):
 
 class _Args:
     """quiz.filter_questions() 는 argparse.Namespace 모양을 기대하므로 흉내만 냄."""
-    def __init__(self, subject, level, qtype, round_):
+    def __init__(self, subject, level, round_):
         self.subject = subject or None
         self.level = level or None
-        self.type = qtype or None
         self.round = round_ or None
 
 
@@ -245,8 +244,7 @@ def start():
         pool = [q for q in QUESTIONS if q["id"] in wrong_ids and q.get("answer")]
     else:
         args = _Args(
-            request.form.get("subject"), request.form.get("level"),
-            request.form.get("type"), request.form.get("round"),
+            request.form.get("subject"), request.form.get("level"), request.form.get("round"),
         )
         pool = filter_questions(QUESTIONS, args)
 
@@ -297,8 +295,6 @@ def answer():
         return redirect(url_for("setup"))
 
     q = _question_by_id(ids[idx])
-    if q["type"] == "practical":
-        return redirect(url_for("quiz"))
     selected = request.form.get("choice")
     session["selected"] = selected
     session["revealed"] = True
@@ -324,7 +320,6 @@ def summary():
     wrong_ids = session.get("wrong_ids", [])
     attempted = score + len(wrong_ids)
     wrong_qs = [_question_by_id(i) for i in wrong_ids]
-    practical_count = sum(1 for i in ids if (q := _question_by_id(i)) and q["type"] == "practical")
 
     if attempted:
         existing = _get_review_ids()
@@ -335,8 +330,7 @@ def summary():
 
     pct = round(score / attempted * 100) if attempted else 0
     return render_template(
-        "summary.html", score=score, attempted=attempted, pct=pct,
-        wrong_qs=wrong_qs, practical_count=practical_count,
+        "summary.html", score=score, attempted=attempted, pct=pct, wrong_qs=wrong_qs,
     )
 
 

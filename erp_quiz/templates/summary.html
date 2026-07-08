@@ -5,9 +5,6 @@
   <div class="card">
     <div class="score-big">{{ score }} / {{ attempted }}</div>
     <p class="sub" style="text-align:center;">정답률 {{ pct }}%</p>
-    {% if practical_count %}
-      <p class="sub" style="text-align:center;">실무(더존) {{ practical_count }}문제는 학습 모드로 확인 (채점 제외)</p>
-    {% endif %}
   </div>
 
   {% if wrong_qs %}

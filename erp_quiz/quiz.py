@@ -11,10 +11,12 @@ extract.py 가 만들어둔 questions.json (1,909문제)에서 조건에 맞는 
     python quiz.py                              # 전체 문제 중 무작위 20문제
     python quiz.py --count 10                   # 문제 수 지정
     python quiz.py --subject 회계 --level 1급    # 과목/급수 필터
-    python quiz.py --type theory                 # 이론만 (practical 은 실무(더존))
     python quiz.py --round "2026년 5월 기출문제"  # 특정 회차만
     python quiz.py --review                      # 예전에 틀렸던 문제만 재출제
     python quiz.py --list                        # 과목/급수/회차 목록만 보기
+
+실무(더존) 문제는 실제 프로그램으로 조회해야 풀리는 시뮬레이션 문제라
+프로그램 없이는 학습 의미가 없어서 다루지 않습니다 (이론 문제만 포함).
 """
 import argparse
 import json
@@ -42,7 +44,7 @@ else:
 QUESTIONS_FILE = os.path.join(BASE_DIR, "questions.json")
 WRONG_LOG_FILE = os.path.join(BASE_DIR, "wrong_log.json")
 
-TYPE_LABEL = {"theory": "이론", "practical": "실무(더존)"}
+TYPE_LABEL = {"theory": "이론"}
 
 
 def load_questions():
@@ -85,8 +87,6 @@ def show_catalog(questions):
     print(", ".join(subjects))
     print("\n=== 회차 ===")
     print(", ".join(rounds))
-    print("\n=== 유형 ===")
-    print("theory(이론), practical(실무-더존)")
 
 
 def filter_questions(questions, args, wrong_ids=None):
@@ -97,8 +97,6 @@ def filter_questions(questions, args, wrong_ids=None):
         if args.subject and q["subject"] != args.subject:
             continue
         if args.level and q["level"] != args.level:
-            continue
-        if args.type and q["type"] != args.type:
             continue
         if args.round and q["round"] != args.round:
             continue
@@ -166,8 +164,6 @@ def main():
     parser.add_argument("--count", type=int, default=20, help="문제 수 (기본 20)")
     parser.add_argument("--subject", type=str, default=None, help="회계/생산/인사/물류")
     parser.add_argument("--level", type=str, default=None, help="1급/2급")
-    parser.add_argument("--type", type=str, choices=["theory", "practical"], default=None,
-                         help="theory(이론) 또는 practical(실무-더존)")
     parser.add_argument("--round", type=str, default=None, help='예: "2026년 5월 기출문제"')
     parser.add_argument("--review", action="store_true", help="예전에 틀렸던 문제만 재출제")
     parser.add_argument("--list", action="store_true", help="사용 가능한 과목/급수/회차 목록만 출력")

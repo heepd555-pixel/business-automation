@@ -294,8 +294,10 @@ def main():
     parser.add_argument("--limit", type=int, default=None, help="파일 개수 제한 (테스트용)")
     args = parser.parse_args()
 
-    theory_files, practical_files = find_files()
-    print(f"이론문항 파일: {len(theory_files)}개, 실무문항(더존) 파일: {len(practical_files)}개")
+    theory_files, _practical_files = find_files()
+    print(f"이론문항 파일: {len(theory_files)}개")
+    # 실무(더존) 문제는 실제 프로그램으로 조회해야 풀리는 시뮬레이션 문제라
+    # 프로그램 없이는 학습 의미가 없다는 판단으로 더 이상 추출하지 않음.
 
     image_map = find_images()
     image_paths = copy_images(image_map)
@@ -303,7 +305,6 @@ def main():
 
     questions = []
     questions += process(theory_files, 'theory', args.limit, image_paths)
-    questions += process(practical_files, 'practical', args.limit, image_paths)
 
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(questions, f, ensure_ascii=False, indent=2)
