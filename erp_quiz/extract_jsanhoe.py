@@ -87,12 +87,16 @@ def parse_questions_pdf(theory_text):
         num = int(parts[i])
         body = parts[i + 1] if i + 1 < len(parts) else ""
         m = re.search(r"①\n②\n③\n④\n", body)
-        if not m:
-            continue
-        stem = body[:m.start()].strip()
-        tail = body[m.end():].strip()
-        lines = [o for o in tail.split("\n") if o.strip()]
-        opts = _resolve_options(lines)
+        if m:
+            stem = body[:m.start()].strip()
+            tail = body[m.end():].strip()
+            lines = [o for o in tail.split("\n") if o.strip()]
+            opts = _resolve_options(lines)
+        else:
+            # "①재무상태표" 처럼 마커+보기가 한 줄에 붙어있는 변형
+            stem_m = re.search(r"①", body)
+            stem = body[:stem_m.start()].strip() if stem_m else body.strip()
+            opts = _resolve_from_merged_text([body])
         if opts:
             results[num] = {"num": num, "stem": stem, "options": opts}
     return results
