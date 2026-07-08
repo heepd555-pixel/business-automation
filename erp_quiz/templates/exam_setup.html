@@ -4,7 +4,14 @@
   <h1>📝 시험모드</h1>
   <p class="sub">회차 하나를 골라 이론 문제 전체를 실제 시험처럼 풀어봅니다. 정답은 문제마다 바로 안 보여주고, 다 풀고 제출하면 한번에 채점됩니다.</p>
 
+  <div class="exam-switch">
+    {% for key, label in exam_labels.items() %}
+      <a href="{{ url_for('exam_setup', exam=key) }}" class="{% if key == exam %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
   <form method="post" action="{{ url_for('exam_start') }}" class="card">
+    <input type="hidden" name="exam" value="{{ exam }}">
     <label>이름 (오답노트 구분용)</label>
     <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
 
@@ -25,5 +32,5 @@
     <button type="submit">시험 시작</button>
   </form>
 
-  <a class="btn btn-secondary" href="{{ url_for('setup') }}">← 일반 연습으로 돌아가기</a>
+  <a class="btn btn-secondary" href="{{ url_for('setup', exam=exam) }}">← 일반 연습으로 돌아가기</a>
 {% endblock %}

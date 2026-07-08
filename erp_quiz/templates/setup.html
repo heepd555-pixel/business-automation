@@ -4,7 +4,14 @@
   <h1>📘 CBT문제</h1>
   <p class="sub">과목/급수/회차를 고르고 시작하세요.</p>
 
+  <div class="exam-switch">
+    {% for key, label in exam_labels.items() %}
+      <a href="{{ url_for('setup', exam=key) }}" class="{% if key == exam %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
   <form method="post" action="{{ url_for('start') }}" class="card">
+    <input type="hidden" name="exam" value="{{ exam }}">
     <label>이름 (오답노트 구분용)</label>
     <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
 
@@ -37,5 +44,5 @@
     <button type="submit">시작하기</button>
   </form>
 
-  <a class="btn btn-secondary" href="{{ url_for('exam_setup') }}">📝 시험모드로 풀기</a>
+  <a class="btn btn-secondary" href="{{ url_for('exam_setup', exam=exam) }}">📝 시험모드로 풀기</a>
 {% endblock %}

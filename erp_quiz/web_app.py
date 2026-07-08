@@ -17,12 +17,25 @@ quiz.py 의 문제 로딩/필터링/오답노트 로직을 그대로 재사용�
 """
 import os
 import random
+import re
 import socket
 from datetime import timedelta
 
 from flask import Flask, redirect, render_template, request, session, url_for
 
 from quiz import filter_questions, load_questions, round_sort_key
+
+EXAM_LABELS = {"erp": "ERP 정보관리사", "전산회계1급": "전산회계1급"}
+DEFAULT_EXAM = "erp"
+
+
+def _round_key(exam, round_label):
+    """회차 정렬 키. ERP는 'YYYY년 M월' 형식(round_sort_key)을, 전산회계1급처럼
+    'N회' 형식만 있는 시험은 회차 번호로 정렬한다."""
+    if exam == "erp":
+        return round_sort_key(round_label)
+    m = re.search(r"\d+", round_label)
+    return (int(m.group()) if m else -1,)
 
 app = Flask(__name__)
 # 클라우드는 워커 프로세스가 여러 개 뜰 수 있어서, os.urandom() 으로 매번 새로
@@ -66,10 +79,19 @@ class _Args:
         self.round = round_ or None
 
 
-def _catalog():
-    subjects = sorted({q["subject"] for q in QUESTIONS})
-    levels = sorted({q["level"] for q in QUESTIONS})
-    rounds = sorted({q["round"] for q in QUESTIONS}, key=round_sort_key, reverse=True)
+def _pick_exam(form_or_args):
+    exam = form_or_args.get("exam") or session.get("exam") or DEFAULT_EXAM
+    if exam not in EXAM_LABELS:
+        exam = DEFAULT_EXAM
+    session["exam"] = exam
+    return exam
+
+
+def _catalog(exam):
+    qs = [q for q in QUESTIONS if q.get("exam", "erp") == exam]
+    subjects = sorted({q["subject"] for q in qs})
+    levels = sorted({q["level"] for q in qs})
+    rounds = sorted({q["round"] for q in qs}, key=lambda r: _round_key(exam, r), reverse=True)
     return subjects, levels, rounds
 
 
@@ -87,12 +109,14 @@ def _local_ip():
 
 @app.route("/")
 def setup():
-    subjects, levels, rounds = _catalog()
+    exam = _pick_exam(request.args)
+    subjects, levels, rounds = _catalog(exam)
     name = session.get("name", "")
     wrong_count = len(_get_review_ids())
     return render_template(
         "setup.html", subjects=subjects, levels=levels, rounds=rounds,
         wrong_count=wrong_count, name=name,
+        exam=exam, exam_labels=EXAM_LABELS,
     )
 
 
@@ -104,29 +128,41 @@ def exam_setup():
     """시험모드: 과목+급수와 범위(특정 회차 또는 연도 전체)를 골라서 그 이론
     문제를 실제 시험처럼 풀고(문제마다 정답 공개 없음), 끝까지 다 풀면
     한번에 채점+해설을 보여준다."""
-    theory_qs = [q for q in QUESTIONS if q["type"] == "theory" and q.get("answer")]
+    exam = _pick_exam(request.args)
+    theory_qs = [
+        q for q in QUESTIONS
+        if q.get("exam", "erp") == exam and q["type"] == "theory" and q.get("answer")
+    ]
 
     present_subjects = {q["subject"] for q in theory_qs}
     subject_levels = [
         {"value": f"{s}|{l}", "label": f"{s}{l}"}
         for s in SUBJECT_ORDER if s in present_subjects
         for l in sorted({q["level"] for q in theory_qs if q["subject"] == s})
+    ] or [
+        {"value": f"{s}|{l}", "label": f"{s}{l}"}
+        for s, l in sorted({(q["subject"], q["level"]) for q in theory_qs})
     ]
 
-    rounds_by_year = {}
-    for q in theory_qs:
-        year = round_sort_key(q["round"])[0]
-        rounds_by_year.setdefault(year, set()).add(q["round"])
-
+    # ERP는 회차가 "YYYY년 M월" 형식이라 연도로 묶어서 "연도 전체" 옵션을 만들 수
+    # 있지만, 전산회계1급처럼 "N회" 형식뿐인 시험은 묶을 연도 개념이 없어서 스킵.
     scopes = []
-    for year in sorted(rounds_by_year, reverse=True):
-        scopes.append({"value": f"year:{year}", "label": f"{year}년 전체", "is_year": True})
-        for r in sorted(rounds_by_year[year], key=round_sort_key, reverse=True):
-            scopes.append({"value": f"round:{r}", "label": f"　{r}", "is_year": False})
+    if exam == "erp":
+        rounds_by_year = {}
+        for q in theory_qs:
+            year = round_sort_key(q["round"])[0]
+            rounds_by_year.setdefault(year, set()).add(q["round"])
+        for year in sorted(rounds_by_year, reverse=True):
+            scopes.append({"value": f"year:{year}", "label": f"{year}년 전체", "is_year": True})
+            for r in sorted(rounds_by_year[year], key=round_sort_key, reverse=True):
+                scopes.append({"value": f"round:{r}", "label": f"　{r}", "is_year": False})
+    else:
+        for r in sorted({q["round"] for q in theory_qs}, key=lambda r: _round_key(exam, r), reverse=True):
+            scopes.append({"value": f"round:{r}", "label": r, "is_year": False})
 
     return render_template(
         "exam_setup.html", subject_levels=subject_levels, scopes=scopes,
-        name=session.get("name", ""),
+        name=session.get("name", ""), exam=exam, exam_labels=EXAM_LABELS,
     )
 
 
@@ -138,6 +174,7 @@ def exam_start():
     session["name"] = name
     session.permanent = True
 
+    exam = _pick_exam(request.form)
     subject_level = request.form.get("subject_level", "")
     sl_parts = subject_level.split("|")
     scope = request.form.get("scope", "")
@@ -154,10 +191,10 @@ def exam_start():
 
     pool = [
         q for q in QUESTIONS
-        if q["subject"] == subject and q["level"] == level
+        if q.get("exam", "erp") == exam and q["subject"] == subject and q["level"] == level
         and q["type"] == "theory" and q.get("answer") and matches_scope(q)
     ]
-    pool.sort(key=lambda q: (round_sort_key(q["round"]), q["num"]))
+    pool.sort(key=lambda q: (_round_key(exam, q["round"]), q["num"]))
 
     session["exam_ids"] = [q["id"] for q in pool]
     session["exam_idx"] = 0
@@ -236,17 +273,19 @@ def start():
     session["name"] = name
     session.permanent = True
 
+    exam = _pick_exam(request.form)
+    exam_qs = [q for q in QUESTIONS if q.get("exam", "erp") == exam]
     review = request.form.get("review") == "on"
     count = int(request.form.get("count") or 20)
 
     if review:
         wrong_ids = _get_review_ids()
-        pool = [q for q in QUESTIONS if q["id"] in wrong_ids and q.get("answer")]
+        pool = [q for q in exam_qs if q["id"] in wrong_ids and q.get("answer")]
     else:
         args = _Args(
             request.form.get("subject"), request.form.get("level"), request.form.get("round"),
         )
-        pool = filter_questions(QUESTIONS, args)
+        pool = filter_questions(exam_qs, args)
 
     random.shuffle(pool)
     picked = pool[:count]
