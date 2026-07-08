@@ -25,7 +25,7 @@ from flask import Flask, redirect, render_template, request, session, url_for
 
 from quiz import filter_questions, load_questions, round_sort_key
 
-EXAM_LABELS = {"erp": "ERP 정보관리사", "전산회계1급": "전산회계1급"}
+EXAM_LABELS = {"erp": "ERP 정보관리사", "전산회계1급": "전산회계1급", "FAT1급": "FAT1급"}
 DEFAULT_EXAM = "erp"
 
 
