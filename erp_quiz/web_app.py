@@ -101,8 +101,9 @@ SUBJECT_ORDER = ["회계", "생산", "인사", "물류"]
 
 @app.route("/exam")
 def exam_setup():
-    """시험모드: 과목+급수와 회차를 하나 골라서 그 이론 문제를 실제 시험처럼
-    풀고(문제마다 정답 공개 없음), 끝까지 다 풀면 한번에 채점+해설을 보여준다."""
+    """시험모드: 과목+급수와 범위(특정 회차 또는 연도 전체)를 골라서 그 이론
+    문제를 실제 시험처럼 풀고(문제마다 정답 공개 없음), 끝까지 다 풀면
+    한번에 채점+해설을 보여준다."""
     theory_qs = [q for q in QUESTIONS if q["type"] == "theory" and q.get("answer")]
 
     present_subjects = {q["subject"] for q in theory_qs}
@@ -112,10 +113,19 @@ def exam_setup():
         for l in sorted({q["level"] for q in theory_qs if q["subject"] == s})
     ]
 
-    rounds = sorted({q["round"] for q in theory_qs}, key=round_sort_key, reverse=True)
+    rounds_by_year = {}
+    for q in theory_qs:
+        year = round_sort_key(q["round"])[0]
+        rounds_by_year.setdefault(year, set()).add(q["round"])
+
+    scopes = []
+    for year in sorted(rounds_by_year, reverse=True):
+        scopes.append({"value": f"year:{year}", "label": f"{year}년 전체 (회차 합쳐서)", "is_year": True})
+        for r in sorted(rounds_by_year[year], key=round_sort_key, reverse=True):
+            scopes.append({"value": f"round:{r}", "label": f"　{r}", "is_year": False})
 
     return render_template(
-        "exam_setup.html", subject_levels=subject_levels, rounds=rounds,
+        "exam_setup.html", subject_levels=subject_levels, scopes=scopes,
         name=session.get("name", ""),
     )
 
@@ -130,17 +140,24 @@ def exam_start():
 
     subject_level = request.form.get("subject_level", "")
     sl_parts = subject_level.split("|")
-    round_ = request.form.get("round", "")
-    if len(sl_parts) != 2 or not round_:
+    scope = request.form.get("scope", "")
+    scope_parts = scope.split(":", 1)
+    if len(sl_parts) != 2 or len(scope_parts) != 2:
         return redirect(url_for("exam_setup"))
     subject, level = sl_parts
+    scope_type, scope_value = scope_parts
+
+    def matches_scope(q):
+        if scope_type == "year":
+            return round_sort_key(q["round"])[0] == int(scope_value)
+        return q["round"] == scope_value
 
     pool = [
         q for q in QUESTIONS
-        if q["subject"] == subject and q["level"] == level and q["round"] == round_
-        and q["type"] == "theory" and q.get("answer")
+        if q["subject"] == subject and q["level"] == level
+        and q["type"] == "theory" and q.get("answer") and matches_scope(q)
     ]
-    pool.sort(key=lambda q: q["num"])
+    pool.sort(key=lambda q: (round_sort_key(q["round"]), q["num"]))
 
     session["exam_ids"] = [q["id"] for q in pool]
     session["exam_idx"] = 0

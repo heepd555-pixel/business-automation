@@ -15,10 +15,10 @@
       {% endfor %}
     </select>
 
-    <label>회차</label>
-    <select name="round">
-      {% for r in rounds %}
-        <option value="{{ r }}">{{ r }}</option>
+    <label>범위</label>
+    <select name="scope">
+      {% for s in scopes %}
+        <option value="{{ s.value }}" {% if s.is_year %}style="font-weight:700;"{% endif %}>{{ s.label }}</option>
       {% endfor %}
     </select>
 
