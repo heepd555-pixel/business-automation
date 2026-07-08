@@ -127,7 +127,7 @@ def extract_explanations_pdf(answer_pdf_path):
     for i in range(1, len(parts), 2):
         num = int(parts[i])
         body = parts[i + 1] if i + 1 < len(parts) else ""
-        m = re.search(r"\[\s*답\s*\]\s*[①②③④]\s*", body)
+        m = re.search(r"\[\s*답\s*\]\s*[①②③④1-4]\s*", body)
         if m:
             results[num] = body[m.end():].strip()
     return results
@@ -209,6 +209,26 @@ def extract_answers_hwp(soup):
     return _parse_answer_table(text)
 
 
+def extract_explanations_hwp(soup):
+    """답안 HWP도 PDF와 같은 구조(B형 정답표 뒤에 문제별 [답] X 해설...)를 쓰는
+    회차가 많아서 같은 방식으로 시도한다. 표/날짜가 섞여 있는 회차는 그냥 스킵됨."""
+    text = soup.get_text("\n", strip=True)
+    start_m = re.search(r"B\s*형\s*\n?(?:<\d+>\s*\n?)+(?:[①②③④1-4]\s*\n?)+", text)
+    if not start_m:
+        return {}
+    detail_text = text[start_m.end():]
+
+    parts = QSTART_RE.split("\n" + detail_text)
+    results = {}
+    for i in range(1, len(parts), 2):
+        num = int(parts[i])
+        body = parts[i + 1] if i + 1 < len(parts) else ""
+        m = re.search(r"\[\s*답\s*\]\s*[①②③④1-4]\s*", body)
+        if m:
+            results[num] = body[m.end():].strip()
+    return results
+
+
 # ---------- 공통 ----------
 
 def _resolve_options(lines):
@@ -263,8 +283,9 @@ def process_round(round_zip_path):
                 print(f"  !! {round_label}: A형/답안 HWP 못찾음")
                 return []
             questions = parse_questions_hwp(hwp_to_soup(a_form, tmp))
-            answers = extract_answers_hwp(hwp_to_soup(answer_file, tmp))
-            explanations = {}  # 오래된 HWP 답안은 표/날짜와 뒤섞여서 해설 추출 안 함
+            answer_soup = hwp_to_soup(answer_file, tmp)
+            answers = extract_answers_hwp(answer_soup)
+            explanations = extract_explanations_hwp(answer_soup)
 
         results = []
         for num, q in questions.items():
