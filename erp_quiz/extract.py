@@ -26,6 +26,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,6 +36,7 @@ from bs4 import BeautifulSoup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SOURCE_DIR = os.path.join(BASE_DIR, "erp_source")
 OUTPUT_FILE = os.path.join(BASE_DIR, "questions.json")
+IMAGES_OUT_DIR = os.path.join(BASE_DIR, "static", "images")
 
 HWP5HTML = r"C:\Users\heepd\AppData\Local\Python\pythoncore-3.14-64\Scripts\hwp5html.exe"
 
@@ -112,6 +114,47 @@ def extract_meta(path):
     sm = SUBJECT_LEVEL_RE.search(name)
     subject, level = (sm.group(1), sm.group(2) + "급") if sm else ("알수없음", "")
     return round_label or "", subject, level
+
+
+IMAGE_NUM_RE = re.compile(r'(\d+)\s*(?:번)?\.\w+$', re.IGNORECASE)
+
+
+def find_images():
+    """erp_source/ 안의 이론문제용 첨부 이미지를 찾아서
+    (round_label, subject, level, num) -> erp_source 안 원본 경로 로 매핑.
+
+    이미지는 HWP 안에 안 박혀있고 "회계1급_이론_10번.JPG" 처럼 과목/급수/문제번호가
+    파일명에 그대로 적힌 별도 파일로 옵니다. 표기 방식이 "_이론_10번" / "_이론25번" /
+    "_12번" / "_객17" 등으로 제각각이라 파일명 끝의 숫자만 문제번호로 뽑습니다."""
+    mapping = {}
+    patterns = ["*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"]
+    paths = []
+    for pat in patterns:
+        paths += glob.glob(os.path.join(SOURCE_DIR, "**", pat), recursive=True)
+    for path in sorted(set(paths)):
+        name = os.path.basename(path)
+        round_label, subject, level = extract_meta(path)
+        num_m = IMAGE_NUM_RE.search(name)
+        if subject == "알수없음" or not num_m:
+            continue
+        key = (round_label, subject, level, int(num_m.group(1)))
+        mapping.setdefault(key, path)
+    return mapping
+
+
+def copy_images(image_map):
+    """매칭된 이미지들을 static/images/ 로 복사하고, 각 키에 대응하는
+    (Flask static 기준) 상대 경로를 돌려준다."""
+    os.makedirs(IMAGES_OUT_DIR, exist_ok=True)
+    result = {}
+    for (round_label, subject, level, num), src in image_map.items():
+        ext = os.path.splitext(src)[1].lower()
+        safe_round = re.sub(r'[^0-9A-Za-z가-힣]+', '_', round_label)
+        fname = f"{safe_round}_{subject}{level}_{num}{ext}"
+        dst = os.path.join(IMAGES_OUT_DIR, fname)
+        shutil.copyfile(src, dst)
+        result[(round_label, subject, level, num)] = f"images/{fname}"
+    return result
 
 
 def hwp_to_html(hwp_path, out_dir):
@@ -214,7 +257,8 @@ def parse_practical(html_path):
     return results
 
 
-def process(paths, qtype, limit=None):
+def process(paths, qtype, limit=None, image_paths=None):
+    image_paths = image_paths or {}
     all_qs = []
     paths = paths[:limit] if limit else paths
     total = len(paths)
@@ -232,6 +276,13 @@ def process(paths, qtype, limit=None):
                 q['subject'] = subject
                 q['level'] = level
                 q['id'] = f"{round_label}|{subject}{level}|{qtype}|{q['num']}"
+                # 첨부 이미지 파일명에는 실무/이론 구분이 없지만, 실제로는 전부
+                # 이론문제용 첨부 이미지라서 이론일 때만 매칭한다 (안 그러면
+                # 번호가 우연히 같은 실무 문제에 엉뚱하게 이미지가 붙는다).
+                if qtype == 'theory':
+                    img = image_paths.get((round_label, subject, level, q['num']))
+                    if img:
+                        q['image'] = img
             all_qs.extend(parsed)
         except Exception as e:
             print(f"    !! 변환 실패: {e}", file=sys.stderr)
@@ -246,9 +297,13 @@ def main():
     theory_files, practical_files = find_files()
     print(f"이론문항 파일: {len(theory_files)}개, 실무문항(더존) 파일: {len(practical_files)}개")
 
+    image_map = find_images()
+    image_paths = copy_images(image_map)
+    print(f"첨부 이미지: {len(image_paths)}개 -> {IMAGES_OUT_DIR}")
+
     questions = []
-    questions += process(theory_files, 'theory', args.limit)
-    questions += process(practical_files, 'practical', args.limit)
+    questions += process(theory_files, 'theory', args.limit, image_paths)
+    questions += process(practical_files, 'practical', args.limit, image_paths)
 
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(questions, f, ensure_ascii=False, indent=2)

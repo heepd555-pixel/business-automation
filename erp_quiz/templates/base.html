@@ -106,10 +106,37 @@
     color: var(--accent);
     margin-right: 6px;
   }
+  .q-label, .choices-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 14px 0 6px;
+  }
+  .q-label:first-child { margin-top: 0; }
   .stem {
     font-size: 1.05rem;
-    margin: 10px 0 16px;
+    font-weight: 600;
+    line-height: 1.55;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px 10px 10px 4px;
     white-space: pre-wrap;
+  }
+  .q-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 0 0 16px;
+  }
+  .choices {
+    border-top: 1px dashed var(--border);
+    padding-top: 4px;
   }
   .option {
     display: block;
