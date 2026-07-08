@@ -8,10 +8,17 @@
     <label>이름 (오답노트 구분용)</label>
     <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
 
-    <label>기출문제 (이론)</label>
-    <select name="combo">
-      {% for e in exams %}
-        <option value="{{ e.value }}">{{ e.round }} - {{ e.subject }}{{ e.level }} ({{ e.count }}문제)</option>
+    <label>과목/급수</label>
+    <select name="subject_level">
+      {% for sl in subject_levels %}
+        <option value="{{ sl.value }}">{{ sl.label }}</option>
+      {% endfor %}
+    </select>
+
+    <label>범위</label>
+    <select name="scope">
+      {% for s in scopes %}
+        <option value="{{ s.value }}" {% if s.is_year %}style="font-weight:700;"{% endif %}>{{ s.label }}</option>
       {% endfor %}
     </select>
 
