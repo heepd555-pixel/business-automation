@@ -97,6 +97,57 @@ def setup():
     )
 
 
+@app.route("/exam")
+def exam():
+    """회차 하나를 통째로 골라서 그 시험지 전체(이론+실무)를 푸는 모드."""
+    combos = sorted(
+        {(q["round"], q["subject"], q["level"]) for q in QUESTIONS},
+        key=lambda c: (round_sort_key(c[0]), c[1], c[2]),
+    )
+    counts = {}
+    for q in QUESTIONS:
+        if not q.get("answer"):
+            continue
+        key = (q["round"], q["subject"], q["level"])
+        counts[key] = counts.get(key, 0) + 1
+    exams = [
+        {"round": r, "subject": s, "level": l, "value": f"{r}|{s}|{l}", "count": counts[(r, s, l)]}
+        for (r, s, l) in combos
+        if counts.get((r, s, l))
+    ]
+    return render_template("exam.html", exams=exams, name=session.get("name", ""))
+
+
+@app.route("/exam/start", methods=["POST"])
+def exam_start():
+    name = request.form.get("name", "").strip()
+    if not name:
+        return redirect(url_for("exam"))
+    session["name"] = name
+    session.permanent = True
+
+    combo = request.form.get("combo", "")
+    parts = combo.split("|")
+    if len(parts) != 3:
+        return redirect(url_for("exam"))
+    round_, subject, level = parts
+
+    pool = [
+        q for q in QUESTIONS
+        if q["round"] == round_ and q["subject"] == subject and q["level"] == level and q.get("answer")
+    ]
+    # 실제 시험지 순서(문제 번호)대로 풀도록, 무작위로 섞지 않음.
+    pool.sort(key=lambda q: (q["type"] != "theory", q["num"]))
+
+    session["ids"] = [q["id"] for q in pool]
+    session["idx"] = 0
+    session["score"] = 0
+    session["wrong_ids"] = []
+    session["revealed"] = False
+    session["selected"] = None
+    return redirect(url_for("quiz"))
+
+
 @app.route("/start", methods=["POST"])
 def start():
     name = request.form.get("name", "").strip()

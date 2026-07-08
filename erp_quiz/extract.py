@@ -42,7 +42,7 @@ SUBJECT_LEVEL_RE = re.compile(r'(회계|생산|인사|물류)(\d)급')
 ROUND_RE = re.compile(r'(\d{4})년\s*(\d+)월')
 
 QSTART_RE = re.compile(r'^문제\s*(\d+)\.\s*')
-SOLUTION_SPLIT_RE = re.compile(r'문제\s*풀이\s*및\s*계산식')
+SOLUTION_SPLIT_RE = re.compile(r'문제\s*풀이\s*및\s*계\s*산\s*식')
 ANSWER_RE = re.compile(r'(?:\[\s*설명\s*\]\s*(.*?))?\[\s*정답\s*\]\s*([①②③④])', re.DOTALL)
 
 VERSION_RE = re.compile(r'^버전\s*(.*?)\s*키워드\s*(.*?)\s*정답\s*(\d+)\s*$')
@@ -52,29 +52,63 @@ CIRCLE_TO_NUM = {'①': '1', '②': '2', '③': '3', '④': '4'}
 
 
 def find_files():
-    """erp_source/ 를 훑어서 (theory 파일 목록, practical(더존) 파일 목록) 반환."""
+    """erp_source/ 를 훑어서 (theory 파일 목록, practical(더존) 파일 목록) 반환.
+
+    연도별로 폴더/파일명 규칙이 제각각이라(예: "이론문제_..." vs "...이론.hwp"
+    vs "이론(공통)_...") 폴더명이 아니라 파일명에 "이론"/"실무"가 있는지로
+    판단한다. 인코딩이 깨진 파일명(예: 오래된 zip의 EUC-KR/CP437 혼선)은
+    "이론"/"실무" 글자 자체가 안 남아있어서 자연히 걸러진다."""
     theory, practical = [], []
     for path in glob.glob(os.path.join(SOURCE_DIR, "**", "*.hwp"), recursive=True):
         norm = path.replace("\\", "/")
         name = os.path.basename(path)
-        if "이론문항" in norm and "이론문제" in name:
+        if "영림원" in norm:
+            continue
+        if "이론" in name:
             theory.append(path)
-        elif "실무" in norm and "영림원" not in norm and "실무문제" in name:
+        elif "실무" in name:
             practical.append(path)
     return sorted(theory), sorted(practical)
 
 
+ROUND_NUM_RE = re.compile(r'(\d{4})년\s*0?(\d)회')          # "2023년 01회 기출문제"
+PAREN_MONTH_RE = re.compile(r'\((\d{1,2})월')                # "...(1월, 100회)"
+YEAR_RE = re.compile(r'(\d{4})년')
+
+# 이 시험은 매년 홀수월(1/3/5/7/9/11월)에 회차가 매겨져서 진행된다.
+# "2023년 01회" 처럼 폴더/파일명에 월이 아예 안 적힌 경우, 회차 번호로부터
+# 월을 역산한다 (1회->1월, 2회->3월, ... 6회->11월).
+ROUND_TO_MONTH = {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11}
+
+
 def extract_meta(path):
-    """파일 경로에서 (round_label, subject, level) 뽑아내기."""
+    """파일 경로에서 (round_label, subject, level) 뽑아내기.
+
+    폴더명 규칙이 연도마다 달라서("2025년 7월 기출문제" / "2023년 01회 기출문제" /
+    "2022년 11월 기출문제(06회)" 등) 폴더명만으로는 정렬 가능한 "YYYY년 M월
+    기출문제" 형태를 항상 못 뽑는다. 폴더명 + 파일명을 합쳐서 최대한 월 정보를
+    찾아내고, 그래도 못 찾으면 회차 번호(홀수월 6회 시행 규칙)로 역산한다."""
     norm = path.replace("\\", "/")
     parts = norm.split("/")
-    # erp_source 바로 아래 폴더 이름이 회차 폴더 (예: "2025년 7월 기출문제")
-    round_label = None
     src_idx = parts.index("erp_source") if "erp_source" in parts else 0
-    if src_idx + 1 < len(parts):
-        round_label = parts[src_idx + 1]
-
+    folder = parts[src_idx + 1] if src_idx + 1 < len(parts) else ""
     name = os.path.basename(path)
+    combined = f"{folder} {name}"
+
+    round_label = folder
+    ym = ROUND_RE.search(combined)
+    if ym:
+        round_label = f"{ym.group(1)}년 {int(ym.group(2))}월 기출문제"
+    else:
+        year_m = YEAR_RE.search(combined)
+        month_m = PAREN_MONTH_RE.search(combined)
+        if year_m and month_m:
+            round_label = f"{year_m.group(1)}년 {int(month_m.group(1))}월 기출문제"
+        else:
+            rm = ROUND_NUM_RE.search(combined)
+            if rm and int(rm.group(2)) in ROUND_TO_MONTH:
+                round_label = f"{rm.group(1)}년 {ROUND_TO_MONTH[int(rm.group(2))]}월 기출문제"
+
     sm = SUBJECT_LEVEL_RE.search(name)
     subject, level = (sm.group(1), sm.group(2) + "급") if sm else ("알수없음", "")
     return round_label or "", subject, level

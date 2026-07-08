@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}기출문제 선택 - ERP 퀴즈{% endblock %}
+{% block content %}
+  <h1>📄 기출문제 선택</h1>
+  <p class="sub">회차 하나를 골라 그 시험지(이론+실무) 전체를 문제 순서대로 풀어봅니다.</p>
+
+  <form method="post" action="{{ url_for('exam_start') }}" class="card">
+    <label>이름 (오답노트 구분용)</label>
+    <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
+
+    <label>기출문제</label>
+    <select name="combo">
+      {% for e in exams %}
+        <option value="{{ e.value }}">{{ e.round }} - {{ e.subject }}{{ e.level }} ({{ e.count }}문제)</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">이 시험지 풀기</button>
+  </form>
+
+  <a class="btn btn-secondary" href="{{ url_for('setup') }}">← 일반 연습으로 돌아가기</a>
+{% endblock %}
