@@ -25,14 +25,22 @@ from flask import Flask, redirect, render_template, request, session, url_for
 
 from quiz import filter_questions, load_questions, round_sort_key
 
-EXAM_LABELS = {"erp": "ERP 정보관리사", "전산회계1급": "전산회계1급", "FAT1급": "FAT1급"}
+EXAM_LABELS = {
+    "erp": "ERP 정보관리사",
+    "전산회계1급": "전산회계1급",
+    "FAT1급": "FAT1급",
+    "전산세무2급": "전산세무2급",
+    "TAT2급": "TAT2급",
+    "컴활2급": "컴활2급",
+}
 DEFAULT_EXAM = "erp"
+_YEAR_MONTH_ROUND_EXAMS = {"erp", "컴활2급"}
 
 
 def _round_key(exam, round_label):
-    """회차 정렬 키. ERP는 'YYYY년 M월' 형식(round_sort_key)을, 전산회계1급처럼
-    'N회' 형식만 있는 시험은 회차 번호로 정렬한다."""
-    if exam == "erp":
+    """회차 정렬 키. ERP/컴활2급은 'YYYY년 M월' 형식(round_sort_key)을,
+    전산회계1급처럼 'N회' 형식만 있는 시험은 회차 번호로 정렬한다."""
+    if exam in _YEAR_MONTH_ROUND_EXAMS:
         return round_sort_key(round_label)
     m = re.search(r"\d+", round_label)
     return (int(m.group()) if m else -1,)
