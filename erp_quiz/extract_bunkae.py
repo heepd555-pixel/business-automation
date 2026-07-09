@@ -517,9 +517,10 @@ def _scenario_bad(scenario):
         return True
     if _MISSING_AMOUNT_RE.search(scenario):
         return True
-    # 원본이 영수증/명세서 등 이미지·표라서 금액이 아예 텍스트로 안 잡힌 경우
-    # (숫자가 하나도 없으면 분개를 풀 수 없다)
-    if not re.search(r"\d", scenario):
+    # 원본이 영수증/명세서/보험증권 등 이미지·표라서 실제 거래금액이 텍스트로
+    # 전혀 안 잡힌 경우. 날짜("6월분")나 %("1%") 같은 숫자만으로는 분개를 풀
+    # 수 없으므로, "N,NNN원" 형태의 진짜 금액 표기가 하나라도 있어야 한다.
+    if not re.search(r"\d[\d,]{2,}\s*원|\d\s*[,.]?\d{3}\s*원", scenario):
         return True
     return False
 
