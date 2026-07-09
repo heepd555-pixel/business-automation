@@ -29,14 +29,38 @@
           <button type="submit">정답 보기</button>
         </form>
       {% else %}
-        <span class="choices-label">정답 (분개)</span>
-        <div class="explanation" style="white-space: pre-line;">{{ q.answer_text }}</div>
+        <span class="choices-label">결합관계</span>
+        <div class="combo-row">
+          {% if q.combo_pair %}
+            <span class="combo-d">{{ q.combo_pair[0] }}</span><span class="combo-arrow">/</span><span class="combo-c">{{ q.combo_pair[1] }}</span>
+          {% else %}
+            <span class="void-badge">회계상 거래 아님</span>
+          {% endif %}
+        </div>
 
-        {% if q.explanation %}
-          <span class="choices-label">풀이 (계정 분류)</span>
-          <div class="explanation" style="white-space: pre-line;">{% if q.combo %}결합관계: {{ q.combo }}
+        <span class="choices-label">분개</span>
+        {% if q.entries %}
+          <div class="taccount">
+            <div class="tside td">
+              <div class="tlbl">차변</div>
+              {% for e in q.entries if e.side == "d" %}
+                <div class="tln"><span class="tacct">{{ e.acct }}</span><span class="tamt">₩{{ "{:,}".format(e.amt) }}</span></div>
+              {% endfor %}
+            </div>
+            <div class="tside tc">
+              <div class="tlbl">대변</div>
+              {% for e in q.entries if e.side == "c" %}
+                <div class="tln"><span class="tacct">{{ e.acct }}</span><span class="tamt">₩{{ "{:,}".format(e.amt) }}</span></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <div class="no-entry-box">분개 없음 — 자산·부채·자본에 아직 변동이 없는 약정 단계입니다.</div>
+        {% endif %}
 
-{% endif %}{{ q.explanation }}</div>
+        {% if q.interp %}
+          <span class="choices-label">왜?</span>
+          <div class="explanation">{{ q.interp }}</div>
         {% endif %}
 
         {% if selected %}

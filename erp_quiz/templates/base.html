@@ -193,6 +193,60 @@
     margin-top: 4px;
     white-space: pre-wrap;
   }
+  .combo-row {
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin: 4px 0 14px;
+  }
+  .combo-d { color: var(--accent); }
+  .combo-c { color: var(--bad); }
+  .combo-arrow { color: var(--ink-soft); margin: 0 0.4em; font-weight: 400; }
+  .void-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .taccount {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .tside {
+    flex: 1;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .tside.td { border-right: 1px dashed var(--border); }
+  .tlbl {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+  .tside.td .tlbl { color: var(--accent); }
+  .tside.tc .tlbl { color: var(--bad); }
+  .tln { font-size: 0.86rem; word-break: keep-all; overflow-wrap: break-word; }
+  .tln .tacct { display: block; }
+  .tln .tamt { display: block; color: var(--ink-soft); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .no-entry-box {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    background: var(--paper);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 4px;
+  }
   .score-big {
     font-size: 2.4rem;
     font-weight: 800;
