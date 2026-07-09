@@ -5,12 +5,11 @@
   <div class="card">
     <span class="badge">{{ type_label }}</span>
     {% if q.type == "bunkae" %}
-      <span class="badge">{{ q.subject }}</span>
       <span class="badge">난이도 {{ q.level }}</span>
     {% else %}
       <span class="badge">{{ q.subject }}{{ q.level }}</span>
+      <span class="badge">{{ q.round }}</span>
     {% endif %}
-    <span class="badge">{{ q.round }}</span>
 
     {% if q.unit %}
       <p class="sub" style="margin-top:10px;">{{ q.unit }}{% if q.keyword %} · 키워드: {{ q.keyword }}{% endif %}</p>
