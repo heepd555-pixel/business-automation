@@ -100,6 +100,8 @@ def filter_questions(questions, args, wrong_ids=None):
             continue
         if args.round and q["round"] != args.round:
             continue
+        if getattr(args, "combo", None) and q.get("combo") != args.combo:
+            continue
         if wrong_ids is not None and q["id"] not in wrong_ids:
             continue
         result.append(q)

@@ -32,6 +32,7 @@ EXAM_LABELS = {
     "전산세무2급": "전산세무2급",
     "TAT2급": "TAT2급",
     "컴활2급": "컴활2급",
+    "분개연습": "분개연습",
 }
 DEFAULT_EXAM = "erp"
 _YEAR_MONTH_ROUND_EXAMS = {"erp", "컴활2급"}
@@ -55,7 +56,7 @@ app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 
 QUESTIONS = load_questions()
-TYPE_LABEL = {"theory": "이론"}
+TYPE_LABEL = {"theory": "이론", "bunkae": "분개연습"}
 
 # 오답노트를 문제 id(긴 문자열) 그대로 쿠키에 쌓으면 금방 브라우저 쿠키 용량
 # 한도(약 4KB)를 넘어서 조용히 통째로 날아갈 수 있다. QUESTIONS 안에서의
@@ -81,10 +82,11 @@ def _set_review_ids(ids):
 
 class _Args:
     """quiz.filter_questions() 는 argparse.Namespace 모양을 기대하므로 흉내만 냄."""
-    def __init__(self, subject, level, round_):
+    def __init__(self, subject, level, round_, combo=None):
         self.subject = subject or None
         self.level = level or None
         self.round = round_ or None
+        self.combo = combo or None
 
 
 def _pick_exam(form_or_args):
@@ -95,12 +97,20 @@ def _pick_exam(form_or_args):
     return exam
 
 
+LEVEL_ORDER = ["하", "중", "상"]
+
+
 def _catalog(exam):
     qs = [q for q in QUESTIONS if q.get("exam", "erp") == exam]
     subjects = sorted({q["subject"] for q in qs})
-    levels = sorted({q["level"] for q in qs})
+    levels = {q["level"] for q in qs}
+    if levels <= set(LEVEL_ORDER):
+        levels = [l for l in LEVEL_ORDER if l in levels]
+    else:
+        levels = sorted(levels)
     rounds = sorted({q["round"] for q in qs}, key=lambda r: _round_key(exam, r), reverse=True)
-    return subjects, levels, rounds
+    combos = sorted({q["combo"] for q in qs if q.get("combo")})
+    return subjects, levels, rounds, combos
 
 
 def _local_ip():
@@ -118,11 +128,11 @@ def _local_ip():
 @app.route("/")
 def setup():
     exam = _pick_exam(request.args)
-    subjects, levels, rounds = _catalog(exam)
+    subjects, levels, rounds, combos = _catalog(exam)
     name = session.get("name", "")
     wrong_count = len(_get_review_ids())
     return render_template(
-        "setup.html", subjects=subjects, levels=levels, rounds=rounds,
+        "setup.html", subjects=subjects, levels=levels, rounds=rounds, combos=combos,
         wrong_count=wrong_count, name=name,
         exam=exam, exam_labels=EXAM_LABELS,
     )
@@ -292,6 +302,7 @@ def start():
     else:
         args = _Args(
             request.form.get("subject"), request.form.get("level"), request.form.get("round"),
+            request.form.get("combo"),
         )
         pool = filter_questions(exam_qs, args)
 
@@ -332,6 +343,15 @@ def quiz():
         selected=session.get("selected"),
         is_last=(idx + 1 == len(ids)),
     )
+
+
+@app.route("/reveal", methods=["POST"])
+def reveal():
+    """분개연습처럼 객관식이 아닌(자가채점) 문제 전용: 점수에 반영하지 않고
+    정답만 화면에 펼쳐 보여준다. 맞았는지 틀렸는지는 이후 /answer 에서
+    사용자가 직접 눌러서 채점한다."""
+    session["revealed"] = True
+    return redirect(url_for("quiz"))
 
 
 @app.route("/answer", methods=["POST"])

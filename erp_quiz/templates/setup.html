@@ -21,11 +21,19 @@
       {% for s in subjects %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
     </select>
 
-    <label>급수</label>
+    <label>{{ "난이도" if exam == "분개연습" else "급수" }}</label>
     <select name="level">
       <option value="">전체</option>
       {% for l in levels %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
     </select>
+
+    {% if exam == "분개연습" and combos %}
+      <label>결합관계</label>
+      <select name="combo">
+        <option value="">전체</option>
+        {% for c in combos %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    {% endif %}
 
     <label>회차</label>
     <select name="round">
@@ -44,5 +52,7 @@
     <button type="submit">시작하기</button>
   </form>
 
-  <a class="btn btn-secondary" href="{{ url_for('exam_setup', exam=exam) }}">📝 시험모드로 풀기</a>
+  {% if exam != "분개연습" %}
+    <a class="btn btn-secondary" href="{{ url_for('exam_setup', exam=exam) }}">📝 시험모드로 풀기</a>
+  {% endif %}
 {% endblock %}

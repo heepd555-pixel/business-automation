@@ -4,7 +4,13 @@
   <div class="progress">{{ idx }} / {{ total }}</div>
   <div class="card">
     <span class="badge">{{ type_label }}</span>
-    <span class="badge">{{ q.subject }}{{ q.level }}</span>
+    {% if q.type == "bunkae" %}
+      <span class="badge">{{ q.subject }}</span>
+      <span class="badge">난이도 {{ q.level }}</span>
+      {% if q.combo and revealed %}<span class="badge">{{ q.combo }}</span>{% endif %}
+    {% else %}
+      <span class="badge">{{ q.subject }}{{ q.level }}</span>
+    {% endif %}
     <span class="badge">{{ q.round }}</span>
 
     {% if q.unit %}
@@ -18,7 +24,37 @@
       <img class="q-image" src="{{ url_for('static', filename=q.image) }}" alt="문제 첨부 이미지">
     {% endif %}
 
-    {% if not revealed %}
+    {% if q.type == "bunkae" %}
+      {% if not revealed %}
+        <form method="post" action="{{ url_for('reveal') }}">
+          <button type="submit">정답 보기</button>
+        </form>
+      {% else %}
+        <span class="choices-label">정답 (분개)</span>
+        <div class="explanation" style="white-space: pre-line;">{{ q.answer_text }}</div>
+
+        {% if q.explanation %}
+          <span class="choices-label">풀이 (계정 분류)</span>
+          <div class="explanation" style="white-space: pre-line;">{{ q.explanation }}</div>
+        {% endif %}
+
+        {% if selected %}
+          {% if selected == q.answer %}
+            <div class="result-banner correct">✓ 맞았습니다!</div>
+          {% else %}
+            <div class="result-banner wrong">✗ 오답으로 기록했습니다.</div>
+          {% endif %}
+          <form method="post" action="{{ url_for('next_question') }}">
+            <button type="submit">{{ "결과 보기" if is_last else "다음 문제" }}</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('answer') }}" class="choices">
+            <button type="submit" name="choice" value="correct" class="option">맞았어요</button>
+            <button type="submit" name="choice" value="wrong" class="option">틀렸어요</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    {% elif not revealed %}
       <span class="choices-label">보기</span>
       <form method="post" action="{{ url_for('answer') }}" class="choices">
         {% for num in ["1","2","3","4"] %}
