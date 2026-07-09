@@ -32,10 +32,12 @@ SOURCES = [
     ("전산세무2급", r"C:\Users\heepd\claude-test\전산세무2급_기출문제", "확정답안", "답안"),
 ]
 
-FATTAT_SOURCES = [
-    ("FAT1급", r"C:\Users\heepd\claude-test\FAT1급_기출문제"),
-    ("TAT2급", r"C:\Users\heepd\claude-test\TAT2급_기출문제"),
-]
+# FAT1급/TAT2급은 "자료설명" 한 블록에 하위 평가문제가 여러 개(매입매출전표입력
+# + 일반전표입력 등) 딸려있는 경우가 흔한데, 지금 파서는 그 중 아무 [일반전표입력]
+# 답이나 첫 번째로 찾아서 앞쪽 자료설명과 짝짓기 때문에 시나리오와 정답이 완전히
+# 다른 거래로 어긋나는 사례가 다수 확인됨(QA 샘플 기준 22%). 안전하게 고치기 전까지
+# 비워둔다 -- 켜려면 아래 리스트를 원래대로 채우고 매칭 로직부터 다시 검증할 것.
+FATTAT_SOURCES = []
 
 SECTION_RE = re.compile(r"\n\s*문제\s*\d+\s*\n")
 FOOTER_RE = re.compile(r"\[제\d+회[^\]]*\]\n\d+/\d+\(뒷면 계속\)\n?")
@@ -525,6 +527,15 @@ def _scenario_bad(scenario):
     return False
 
 
+_ANSWER_CONTAMINATION_RE = re.compile(r"전기말의 회계처리|처분손익\s*[:：]|\(차\)\s*[-=]|\(대\)\s*[-=]")
+
+
+def _answer_bad(answer_text):
+    # 전기(작년) 회계처리를 설명하는 각주가 (차)/(대) 항목으로 잘못 섞여 들어가면
+    # 우연히 균형이 맞아떨어져도 실제로는 이번 거래의 정답이 아니다.
+    return bool(_ANSWER_CONTAMINATION_RE.search(answer_text))
+
+
 def _build_results(subject, round_label, pairs):
     results = []
     num = 0
@@ -532,7 +543,7 @@ def _build_results(subject, round_label, pairs):
         # 균형 보정을 거쳤는데도 차변/대변 합계가 안 맞으면 파싱이 깨진 것이므로
         # 잘못된 정답을 보여주느니 아예 제외한다. 시나리오에 정답 마커가 섞여
         # 들어갔거나 금액 숫자가 통째로 빠진 경우도 마찬가지로 제외한다.
-        if not _entries_balanced(entries) or _scenario_bad(scenario):
+        if not _entries_balanced(entries) or _scenario_bad(scenario) or _answer_bad(answer_text):
             continue
         num += 1
         combo, explanation = build_combo_and_explanation(entries)
