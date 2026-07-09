@@ -27,14 +27,6 @@
       {% for l in levels %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
     </select>
 
-    {% if exam == "분개연습" and combos %}
-      <label>결합관계</label>
-      <select name="combo">
-        <option value="">전체</option>
-        {% for c in combos %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-      </select>
-    {% endif %}
-
     <label>회차</label>
     <select name="round">
       <option value="">전체 (모든 회차 랜덤)</option>

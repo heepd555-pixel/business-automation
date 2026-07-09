@@ -7,7 +7,6 @@
     {% if q.type == "bunkae" %}
       <span class="badge">{{ q.subject }}</span>
       <span class="badge">난이도 {{ q.level }}</span>
-      {% if q.combo and revealed %}<span class="badge">{{ q.combo }}</span>{% endif %}
     {% else %}
       <span class="badge">{{ q.subject }}{{ q.level }}</span>
     {% endif %}
@@ -35,7 +34,9 @@
 
         {% if q.explanation %}
           <span class="choices-label">풀이 (계정 분류)</span>
-          <div class="explanation" style="white-space: pre-line;">{{ q.explanation }}</div>
+          <div class="explanation" style="white-space: pre-line;">{% if q.combo %}결합관계: {{ q.combo }}
+
+{% endif %}{{ q.explanation }}</div>
         {% endif %}
 
         {% if selected %}

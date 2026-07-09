@@ -517,6 +517,10 @@ def _scenario_bad(scenario):
         return True
     if _MISSING_AMOUNT_RE.search(scenario):
         return True
+    # 원본이 영수증/명세서 등 이미지·표라서 금액이 아예 텍스트로 안 잡힌 경우
+    # (숫자가 하나도 없으면 분개를 풀 수 없다)
+    if not re.search(r"\d", scenario):
+        return True
     return False
 
 
