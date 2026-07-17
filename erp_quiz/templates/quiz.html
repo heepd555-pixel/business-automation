@@ -21,6 +21,11 @@
     {% if q.image %}
       <img class="q-image" src="{{ url_for('static', filename=q.image) }}" alt="문제 첨부 이미지">
     {% endif %}
+    {% if q.images %}
+      {% for img in q.images %}
+        <img class="q-image" src="{{ url_for('static', filename=img) }}" alt="실기 화면 캡처">
+      {% endfor %}
+    {% endif %}
 
     {% if q.type == "bunkae" %}
       {% if not revealed %}

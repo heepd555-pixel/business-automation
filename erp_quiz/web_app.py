@@ -33,9 +33,10 @@ EXAM_LABELS = {
     "TAT2급": "TAT2급",
     "컴활2급": "컴활2급",
     "분개연습": "분개연습",
+    "ERP실기": "ERP실기(회계/인사)",
 }
 DEFAULT_EXAM = "erp"
-_YEAR_MONTH_ROUND_EXAMS = {"erp", "컴활2급"}
+_YEAR_MONTH_ROUND_EXAMS = {"erp", "컴활2급", "ERP실기"}
 
 
 def _round_key(exam, round_label):
@@ -56,7 +57,7 @@ app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 
 QUESTIONS = load_questions()
-TYPE_LABEL = {"theory": "이론", "bunkae": "분개연습"}
+TYPE_LABEL = {"theory": "이론", "bunkae": "분개연습", "practical": "실기"}
 
 # 오답노트를 문제 id(긴 문자열) 그대로 쿠키에 쌓으면 금방 브라우저 쿠키 용량
 # 한도(약 4KB)를 넘어서 조용히 통째로 날아갈 수 있다. QUESTIONS 안에서의
