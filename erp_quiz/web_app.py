@@ -33,7 +33,6 @@ EXAM_LABELS = {
     "TAT2급": "TAT2급",
     "컴활2급": "컴활2급",
     "분개연습": "분개연습",
-    "ERP실기": "ERP실기(회계/인사)",
 }
 DEFAULT_EXAM = "erp"
 _YEAR_MONTH_ROUND_EXAMS = {"erp", "컴활2급", "ERP실기"}
