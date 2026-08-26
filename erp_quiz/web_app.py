@@ -37,6 +37,11 @@ DEFAULT_EXAM = "erp"
 _YEAR_MONTH_ROUND_EXAMS = {"erp", "ERP실기"}
 
 
+def is_correct(selected, answer):
+    """복수정답 인정 문항은 정답이 "1,3" 처럼 저장된다."""
+    return bool(selected) and selected in (answer or "").split(",")
+
+
 def _round_key(exam, round_label):
     """회차 정렬 키. ERP는 'YYYY년 M월' 형식(round_sort_key)을,
     전산회계1급처럼 'N회' 형식만 있는 시험은 회차 번호로 정렬한다."""
@@ -265,7 +270,7 @@ def exam_result():
     for qid in ids:
         q = _question_by_id(qid)
         selected = answers.get(qid)
-        correct = selected == q["answer"]
+        correct = is_correct(selected, q["answer"])
         if correct:
             score += 1
         else:
@@ -364,7 +369,7 @@ def answer():
     selected = request.form.get("choice")
     session["selected"] = selected
     session["revealed"] = True
-    if selected == q["answer"]:
+    if is_correct(selected, q["answer"]):
         session["score"] = session.get("score", 0) + 1
     else:
         session["wrong_ids"] = session.get("wrong_ids", []) + [q["id"]]

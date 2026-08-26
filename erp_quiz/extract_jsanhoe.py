@@ -32,7 +32,10 @@ ROUND_RE = re.compile(r"(\d+)회")
 QSTART_RE = re.compile(r"\n(\d+)\.\s*")
 HEADER_FOOTER_RE = re.compile(r"\[제\d+회[^\]]*\]\n")
 PAGE_FOOTER_RE = re.compile(r"\d+/\d+\(뒷면 계속\)\n?")
-ANSWER_TABLE_RE = re.compile(r"A\s*형\s*\n?((?:<\d+>\s*\n?)+)((?:[①②③④1-4]\s*\n?){1,20})")
+ANSWER_TABLE_RE = re.compile(
+    r"A\s*형\s*\n?((?:<\d+>\s*\n?)+)"
+    r"((?:[①②③④1-4]\s*(?:,\s*[①②③④1-4]\s*)*\n?){1,20})"
+)
 
 
 def _fix_mojibake(name):
@@ -253,8 +256,13 @@ def _parse_answer_table(text):
     if not m:
         return {}
     nums = re.findall(r"<(\d+)>", m.group(1))
-    marks = re.findall(r"[①②③④1-4]", m.group(2))
-    answers = [CIRCLE_TO_NUM.get(c, c) for c in marks]  # 원문자 또는 이미 숫자인 경우 둘 다 처리
+    # 복수정답 인정 문항은 "①,③" 처럼 쉼표로 묶여 나온다. 한 문항 몫을 통째로
+    # 잡아서 "1,3" 으로 저장한다 (web_app 이 쉼표로 나눠서 채점).
+    marks = re.findall(r"[①②③④1-4](?:\s*,\s*[①②③④1-4])*", m.group(2))
+    answers = [
+        ",".join(CIRCLE_TO_NUM.get(c, c) for c in re.findall(r"[①②③④1-4]", mk))
+        for mk in marks
+    ]  # 원문자 또는 이미 숫자인 경우 둘 다 처리
     return {int(n): a for n, a in zip(nums, answers)}
 
 
