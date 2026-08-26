@@ -15,13 +15,11 @@
     <label>이름 (오답노트 구분용)</label>
     <input type="text" name="name" value="{{ name }}" required placeholder="예: 홍길동">
 
-    {% if exam != "분개연습" %}
-      <label>과목</label>
-      <select name="subject">
-        <option value="">전체</option>
-        {% for s in subjects %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-      </select>
-    {% endif %}
+    <label>과목</label>
+    <select name="subject">
+      <option value="">전체</option>
+      {% for s in subjects %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
 
     <label>{{ "난이도" if exam == "분개연습" else "급수" }}</label>
     <select name="level">
@@ -29,11 +27,18 @@
       {% for l in levels %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
     </select>
 
-    {% if exam != "분개연습" %}
-      <label>회차</label>
-      <select name="round">
-        <option value="">전체 (모든 회차 랜덤)</option>
-        {% for r in rounds %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    <label>회차</label>
+    <select name="round">
+      <option value="">전체 (모든 회차 랜덤)</option>
+      {% for r in rounds %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+
+    {# 결합관계(거래 8요소) 필터. combo 를 가진 시험(분개연습)에서만 뜬다. #}
+    {% if combos %}
+      <label>결합관계</label>
+      <select name="combo">
+        <option value="">전체</option>
+        {% for c in combos %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
       </select>
     {% endif %}
 
